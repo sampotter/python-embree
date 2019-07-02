@@ -6,7 +6,13 @@ import numpy as np
 from enum import Enum
 
 from libc.stdio cimport printf
-from libc.stdlib cimport free, malloc
+from libc.stdlib cimport free
+
+from posix.stdlib cimport posix_memalign
+
+cdef extern from "<errno.h>":
+    cdef int ENOMEM "ENOMEM"
+    cdef int EINVAL "EINVAL"
 
 DEF RTC_MAX_INSTANCE_LEVEL_COUNT = 1
 
@@ -625,6 +631,107 @@ cdef class RayHit:
             self.dir, self.origin, self.tfar, self.tnear,
             self.geom_id, self.inst_id, self.normal, self.prim_id, self.uv
         )
+
+cdef class RayHit1M:
+    cdef:
+        RTCRayHit *_rayhit
+        unsigned _M
+
+    def __cinit__(self, unsigned M):
+        cdef size_t size = M*sizeof(RTCRayHit)
+        cdef int code = posix_memalign(<void **>&self._rayhit, 0x10, size)
+        if code == ENOMEM:
+            raise MemoryError('failed to allocate %d bytes' % (size,))
+        if code == EINVAL:
+            raise ValueError('bad alignment for posix_memalign')
+        self._M = M
+
+    def __dealloc__(self):
+        free(self._rayhit)
+
+    def toarray(self):
+        return np.asarray(<RTCRayHit[:self._M]> self._rayhit)
+
+    @property
+    def origin(self):
+        cdef float[:, :] mv = <float[:self._M, :3]> &self._rayhit[0].ray.org_x
+        mv.strides[0] = sizeof(RTCRayHit)
+        return np.asarray(mv)
+
+    @property
+    def tnear(self):
+        cdef float[:] mv = <float[:self._M]> &self._rayhit[0].ray.tnear
+        mv.strides[0] = sizeof(RTCRayHit)
+        return np.asarray(mv)
+
+    @property
+    def dir(self):
+        cdef float[:, :] mv = <float[:self._M, :3]> &self._rayhit[0].ray.dir_x
+        mv.strides[0] = sizeof(RTCRayHit)
+        return np.asarray(mv)
+
+    @property
+    def time(self):
+        cdef float[:] mv = <float[:self._M]> &self._rayhit[0].ray.time
+        mv.strides[0] = sizeof(RTCRayHit)
+        return np.asarray(mv)
+
+    @property
+    def tfar(self):
+        cdef float[:] mv = <float[:self._M]> &self._rayhit[0].ray.tfar
+        mv.strides[0] = sizeof(RTCRayHit)
+        return np.asarray(mv)
+
+    @property
+    def mask(self):
+        cdef unsigned[:] mv = <unsigned[:self._M]> &self._rayhit[0].ray.mask
+        mv.strides[0] = sizeof(RTCRayHit)
+        return np.asarray(mv)
+
+    @property
+    def id(self):
+        cdef unsigned[:] mv = <unsigned[:self._M]> &self._rayhit[0].ray.id
+        mv.strides[0] = sizeof(RTCRayHit)
+        return np.asarray(mv)
+
+    @property
+    def flags(self):
+        cdef unsigned[:] mv = <unsigned[:self._M]> &self._rayhit[0].ray.flags
+        mv.strides[0] = sizeof(RTCRayHit)
+        return np.asarray(mv)
+
+    @property
+    def normal(self):
+        cdef float[:, :] mv = <float[:self._M, :3]> &self._rayhit[0].hit.Ng_x
+        mv.strides[0] = sizeof(RTCRayHit)
+        return np.asarray(mv)
+
+    @property
+    def uv(self):
+        cdef float[:, :] mv = <float[:self._M, :2]> &self._rayhit[0].hit.u
+        mv.strides[0] = sizeof(RTCRayHit)
+        return np.asarray(mv)
+
+    @property
+    def prim_id(self):
+        cdef unsigned[:] mv = <unsigned[:self._M]> &self._rayhit[0].hit.primID
+        mv.strides[0] = sizeof(RTCRayHit)
+        return np.asarray(mv)
+
+    @property
+    def geom_id(self):
+        cdef unsigned[:] mv = <unsigned[:self._M]> &self._rayhit[0].hit.geomID
+        mv.strides[0] = sizeof(RTCRayHit)
+        return np.asarray(mv)
+
+    @property
+    def inst_id(self):
+        cdef unsigned[:, :] mv = \
+            <unsigned[:self._M, :RTC_MAX_INSTANCE_LEVEL_COUNT]> \
+            &self._rayhit[0].hit.instID[0]
+        mv.strides[0] = sizeof(RTCRayHit)
+        return np.asarray(mv)
+
 
 cdef class IntersectContext:
     cdef:
