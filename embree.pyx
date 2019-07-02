@@ -559,69 +559,70 @@ cdef class RayHit:
     cdef:
         RTCRayHit _rayhit
 
-    def __init__(self, origin, dir, tnear=0.0, tfar=np.inf):
+    @property
+    def origin(self):
+        return np.asarray(<float[:3]> &self._rayhit.ray.org_x)
+
+    @origin.setter
+    def origin(self, origin):
         self._rayhit.ray.org_x = origin[0]
         self._rayhit.ray.org_y = origin[1]
         self._rayhit.ray.org_z = origin[2]
-        self._rayhit.ray.tnear = tnear
-        self._rayhit.ray.dir_x = dir[0]
-        self._rayhit.ray.dir_y = dir[1]
-        self._rayhit.ray.dir_z = dir[2]
-        self._rayhit.ray.tfar = tfar
-        self._rayhit.hit.primID = INVALID_GEOMETRY_ID
-        self._rayhit.hit.geomID = INVALID_GEOMETRY_ID
-        # TODO: this isn't finished
-
-    @property
-    def origin(self):
-        return (
-            self._rayhit.ray.org_x,
-            self._rayhit.ray.org_y,
-            self._rayhit.ray.org_z
-        )
 
     @property
     def dir(self):
-        return (
-            self._rayhit.ray.dir_x,
-            self._rayhit.ray.dir_y,
-            self._rayhit.ray.dir_z
-        )
+        return np.asarray(<float[:3]> &self._rayhit.ray.dir_x)
+
+    @dir.setter
+    def dir(self, dir):
+        self._rayhit.ray.dir_x = dir[0]
+        self._rayhit.ray.dir_y = dir[1]
+        self._rayhit.ray.dir_z = dir[2]
 
     @property
     def tnear(self):
         return self._rayhit.ray.tnear
 
+    @tnear.setter
+    def tnear(self, tnear):
+        self._rayhit.ray.tnear = tnear
+
     @property
     def tfar(self):
         return self._rayhit.ray.tfar
 
+    @tfar.setter
+    def tfar(self, tfar):
+        self._rayhit.ray.tfar = tfar
+
     @property
     def normal(self):
-        return (
-            self._rayhit.hit.Ng_x,
-            self._rayhit.hit.Ng_y,
-            self._rayhit.hit.Ng_z
-        )
+        return np.asarray(<float[:3]> &self._rayhit.hit.Ng_x)
 
     @property
     def uv(self):
-        return (
-            self._rayhit.hit.u,
-            self._rayhit.hit.v
-        )
+        return np.asarray(<float[:2]> &self._rayhit.hit.u)
 
     @property
     def prim_id(self):
         return self._rayhit.hit.primID
 
+    @prim_id.setter
+    def prim_id(self, prim_id):
+        self._rayhit.hit.primID = prim_id
+
     @property
     def geom_id(self):
         return self._rayhit.hit.geomID
 
+    @geom_id.setter
+    def geom_id(self, geom_id):
+        self._rayhit.hit.geomID = geom_id
+
     @property
     def inst_id(self):
-        return self._rayhit.hit.instID[0]
+        return np.asarray(
+            <unsigned[:RTC_MAX_INSTANCE_LEVEL_COUNT]> self._rayhit.hit.instID)
 
     def __repr__(self):
         return (
