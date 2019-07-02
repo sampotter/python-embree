@@ -6,13 +6,14 @@ from Cython.Build import cythonize
 extensions = [
     Extension(
         'embree',
-        ['embree/embree.pyx'],
+        ['embree.pyx'],
         libraries=['embree3']
     )
 ]
 
 setup(
-    name='python-embree',
+    name='embree',
     packages=find_packages(),
-    ext_modules=cythonize(extensions)
+    ext_modules=cythonize(extensions),
+    zip_safe=False
 )

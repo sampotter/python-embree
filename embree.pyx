@@ -234,6 +234,8 @@ cdef extern from "embree3/rtcore.h":
     void rtcIntersect1M(RTCScene, RTCIntersectContext*, RTCRayHit*,
                         unsigned, size_t)
 
+INVALID_GEOMETRY_ID = <unsigned int> -1
+
 class BufferType(Enum):
     Index = 0
     Vertex = 1
@@ -495,11 +497,11 @@ cdef class Ray:
 
     @property
     def origin(self):
-        return np.array([self._ray.org_x, self._ray.org_y, self._ray.org_z])
+        return (self._ray.org_x, self._ray.org_y, self._ray.org_z)
 
     @property
     def direction(self):
-        return np.array([self._ray.dir_x, self._ray.dir_y, self._ray.dir_z])
+        return (self._ray.dir_x, self._ray.dir_y, self._ray.dir_z)
 
     @property
     def tnear(self):
@@ -509,20 +511,26 @@ cdef class Ray:
     def tfar(self):
         return self._ray.tfar
 
+    def __repr__(self):
+        return 'Ray(direction = %s, origin = %s, tfar = %s, tnear = %s)' % (
+            self.direction, self.origin, self.tfar, self.tnear
+        )
+
 cdef class Hit:
     cdef:
         RTCHit _hit
 
-    def __cinit__(self, RTCHit hit):
-        self._hit = hit
+    def __cinit__(self):
+        self._hit.primID = INVALID_GEOMETRY_ID
+        self._hit.geomID = INVALID_GEOMETRY_ID
 
     @property
     def normal(self):
-        return np.array([self._hit.Ng_x, self._hit.Ng_y, self._hit.Ng_z])
+        return (self._hit.Ng_x, self._hit.Ng_y, self._hit.Ng_z)
 
     @property
     def uv(self):
-        return np.array([self._hit.u, self._hit.v])
+        return (self._hit.u, self._hit.v)
 
     @property
     def prim_id(self):
@@ -535,6 +543,78 @@ cdef class Hit:
     @property
     def inst_id(self):
         return self._hit.instID[0]
+
+    def __repr__(self):
+        return 'Hit(geom_id = %d, inst_id = %d, normal = %s, prim_id = %d, uv = %s)' % (
+            self.geom_id, self.inst_id, self.normal, self.prim_id, self.uv
+        )
+
+cdef class RayHit:
+    cdef:
+        RTCRayHit _rayhit
+
+    def __cinit__(self, RTCRayHit rayhit):
+        self._rayhit = rayhit
+
+    @property
+    def origin(self):
+        return (
+            self._rayhit.ray.org_x,
+            self._rayhit.ray.org_y,
+            self._rayhit.ray.org_z
+        )
+
+    @property
+    def direction(self):
+        return (
+            self._rayhit.ray.dir_x,
+            self._rayhit.ray.dir_y,
+            self._rayhit.ray.dir_z
+        )
+
+    @property
+    def tnear(self):
+        return self._rayhit.ray.tnear
+
+    @property
+    def tfar(self):
+        return self._rayhit.ray.tfar
+
+    @property
+    def normal(self):
+        return (
+            self._rayhit.hit.Ng_x,
+            self._rayhit.hit.Ng_y,
+            self._rayhit.hit.Ng_z
+        )
+
+    @property
+    def uv(self):
+        return (
+            self._rayhit.hit.u,
+            self._rayhit.hit.v
+        )
+
+    @property
+    def prim_id(self):
+        return self._rayhit.hit.primID
+
+    @property
+    def geom_id(self):
+        return self._rayhit.hit.geomID
+
+    @property
+    def inst_id(self):
+        return self._rayhit.hit.instID[0]
+
+    def __repr__(self):
+        return (
+            'RayHit(direction = %s, origin = %s, tfar = %s, tnear = %s, ' + \
+            'geom_id = %d, inst_id = %d, normal = %s, prim_id = %d, uv = %s)'
+        ) % (
+            self.direction, self.origin, self.tfar, self.tnear,
+            self.geom_id, self.inst_id, self.normal, self.prim_id, self.uv
+        )
 
 cdef class Scene:
     cdef:
@@ -567,8 +647,7 @@ cdef class Scene:
         cdef RTCRayHit rayhit
         rayhit.ray = ray._ray
         rtcIntersect1(self._scene, &context, &rayhit)
-        ray._ray = rayhit.ray
-        return Hit(rayhit.hit)
+        return RayHit(rayhit)
 
     def intersect1M(self, origin, direction, tnear=None, tfar=None):
         cdef unsigned M = origin.shape[0]
