@@ -484,14 +484,14 @@ cdef class Ray:
     cdef:
         RTCRay _ray
 
-    def __cinit__(self, origin, direction, tnear=0, tfar=np.inf):
+    def __cinit__(self, origin, dir, tnear=0, tfar=np.inf):
         self._ray.org_x = origin[0]
         self._ray.org_y = origin[1]
         self._ray.org_z = origin[2]
         self._ray.tnear = tnear
-        self._ray.dir_x = direction[0]
-        self._ray.dir_y = direction[1]
-        self._ray.dir_z = direction[2]
+        self._ray.dir_x = dir[0]
+        self._ray.dir_y = dir[1]
+        self._ray.dir_z = dir[2]
         self._ray.tfar = tfar
         # TODO: this isn't finished
 
@@ -500,7 +500,7 @@ cdef class Ray:
         return (self._ray.org_x, self._ray.org_y, self._ray.org_z)
 
     @property
-    def direction(self):
+    def dir(self):
         return (self._ray.dir_x, self._ray.dir_y, self._ray.dir_z)
 
     @property
@@ -512,8 +512,8 @@ cdef class Ray:
         return self._ray.tfar
 
     def __repr__(self):
-        return 'Ray(direction = %s, origin = %s, tfar = %s, tnear = %s)' % (
-            self.direction, self.origin, self.tfar, self.tnear
+        return 'Ray(dir = %s, origin = %s, tfar = %s, tnear = %s)' % (
+            self.dir, self.origin, self.tfar, self.tnear
         )
 
 cdef class Hit:
@@ -553,14 +553,14 @@ cdef class RayHit:
     cdef:
         RTCRayHit _rayhit
 
-    def __init__(self, origin, direction, tnear=0.0, tfar=np.inf):
+    def __init__(self, origin, dir, tnear=0.0, tfar=np.inf):
         self._rayhit.ray.org_x = origin[0]
         self._rayhit.ray.org_y = origin[1]
         self._rayhit.ray.org_z = origin[2]
         self._rayhit.ray.tnear = tnear
-        self._rayhit.ray.dir_x = direction[0]
-        self._rayhit.ray.dir_y = direction[1]
-        self._rayhit.ray.dir_z = direction[2]
+        self._rayhit.ray.dir_x = dir[0]
+        self._rayhit.ray.dir_y = dir[1]
+        self._rayhit.ray.dir_z = dir[2]
         self._rayhit.ray.tfar = tfar
         self._rayhit.hit.primID = INVALID_GEOMETRY_ID
         self._rayhit.hit.geomID = INVALID_GEOMETRY_ID
@@ -575,7 +575,7 @@ cdef class RayHit:
         )
 
     @property
-    def direction(self):
+    def dir(self):
         return (
             self._rayhit.ray.dir_x,
             self._rayhit.ray.dir_y,
@@ -619,10 +619,10 @@ cdef class RayHit:
 
     def __repr__(self):
         return (
-            'RayHit(direction = %s, origin = %s, tfar = %s, tnear = %s, ' + \
+            'RayHit(dir = %s, origin = %s, tfar = %s, tnear = %s, ' + \
             'geom_id = %d, inst_id = %d, normal = %s, prim_id = %d, uv = %s)'
         ) % (
-            self.direction, self.origin, self.tfar, self.tnear,
+            self.dir, self.origin, self.tfar, self.tnear,
             self.geom_id, self.inst_id, self.normal, self.prim_id, self.uv
         )
 
