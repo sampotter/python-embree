@@ -553,8 +553,18 @@ cdef class RayHit:
     cdef:
         RTCRayHit _rayhit
 
-    def __cinit__(self, RTCRayHit rayhit):
-        self._rayhit = rayhit
+    def __init__(self, origin, direction, tnear=0.0, tfar=np.inf):
+        self._rayhit.ray.org_x = origin[0]
+        self._rayhit.ray.org_y = origin[1]
+        self._rayhit.ray.org_z = origin[2]
+        self._rayhit.ray.tnear = tnear
+        self._rayhit.ray.dir_x = direction[0]
+        self._rayhit.ray.dir_y = direction[1]
+        self._rayhit.ray.dir_z = direction[2]
+        self._rayhit.ray.tfar = tfar
+        self._rayhit.hit.primID = INVALID_GEOMETRY_ID
+        self._rayhit.hit.geomID = INVALID_GEOMETRY_ID
+        # TODO: this isn't finished
 
     @property
     def origin(self):
@@ -616,6 +626,13 @@ cdef class RayHit:
             self.geom_id, self.inst_id, self.normal, self.prim_id, self.uv
         )
 
+cdef class IntersectContext:
+    cdef:
+        RTCIntersectContext _context
+
+    def __cinit__(self):
+        rtcInitIntersectContext(&self._context)
+
 cdef class Scene:
     cdef:
         RTCScene _scene
@@ -641,36 +658,10 @@ cdef class Scene:
     def commit(self):
         rtcCommitScene(self._scene)
 
-    def intersect1(self, Ray ray):
-        cdef RTCIntersectContext context
-        rtcInitIntersectContext(&context)
-        cdef RTCRayHit rayhit
-        rayhit.ray = ray._ray
-        rtcIntersect1(self._scene, &context, &rayhit)
-        return RayHit(rayhit)
+    def intersect1(self, IntersectContext context, RayHit rayhit):
+        rtcIntersect1(self._scene, &context._context, &rayhit._rayhit)
 
-    def intersect1M(self, origin, direction, tnear=None, tfar=None):
-        cdef unsigned M = origin.shape[0]
-        cdef RTCIntersectContext context
-        rtcInitIntersectContext(&context)
-        cdef RTCRayHit* rayhit = <RTCRayHit*> malloc(M*sizeof(RTCRayHit))
-        if tnear is None:
-            tnear = np.zeros((M,), dtype=np.float32)
-        if tfar is None:
-            tfar = np.empty((M,), dtype=np.float32)
-            tfar[:] = np.inf
-        for i in range(M):
-            rayhit[i].ray.org_x = origin[i, 0]
-            rayhit[i].ray.org_y = origin[i, 1]
-            rayhit[i].ray.org_z = origin[i, 2]
-            rayhit[i].ray.tnear = tnear[i]
-            rayhit[i].ray.dir_x = direction[i, 0]
-            rayhit[i].ray.dir_y = direction[i, 1]
-            rayhit[i].ray.dir_z = direction[i, 2]
-            rayhit[i].ray.tfar = tfar[i]
-        rtcIntersect1M(self._scene, &context, rayhit, M, sizeof(RTCRayHit))
-        prim_id = np.empty((M,), dtype=np.uint32)
-        for i in range(M):
-            prim_id[i] = rayhit[i].hit.primID
-        free(rayhit)
-        return prim_id
+    # def intersect1M(self, ):
+    #     cdef unsigned M = len(rays)
+    #     cdef RTCIntersectContext context
+    #     rtcInitIntersectContext
