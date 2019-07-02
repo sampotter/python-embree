@@ -490,10 +490,10 @@ cdef class Ray:
     cdef:
         RTCRay _ray
 
-    def __cinit__(self, origin, dir, tnear=0, tfar=np.inf):
-        self._ray.org_x = origin[0]
-        self._ray.org_y = origin[1]
-        self._ray.org_z = origin[2]
+    def __cinit__(self, org, dir, tnear=0, tfar=np.inf):
+        self._ray.org_x = org[0]
+        self._ray.org_y = org[1]
+        self._ray.org_z = org[2]
         self._ray.tnear = tnear
         self._ray.dir_x = dir[0]
         self._ray.dir_y = dir[1]
@@ -502,7 +502,7 @@ cdef class Ray:
         # TODO: this isn't finished
 
     @property
-    def origin(self):
+    def org(self):
         return (self._ray.org_x, self._ray.org_y, self._ray.org_z)
 
     @property
@@ -518,8 +518,8 @@ cdef class Ray:
         return self._ray.tfar
 
     def __repr__(self):
-        return 'Ray(dir = %s, origin = %s, tfar = %s, tnear = %s)' % (
-            self.dir, self.origin, self.tfar, self.tnear
+        return 'Ray(dir = %s, org = %s, tfar = %s, tnear = %s)' % (
+            self.dir, self.org, self.tfar, self.tnear
         )
 
 cdef class Hit:
@@ -560,14 +560,14 @@ cdef class RayHit:
         RTCRayHit _rayhit
 
     @property
-    def origin(self):
+    def org(self):
         return np.asarray(<float[:3]> &self._rayhit.ray.org_x)
 
-    @origin.setter
-    def origin(self, origin):
-        self._rayhit.ray.org_x = origin[0]
-        self._rayhit.ray.org_y = origin[1]
-        self._rayhit.ray.org_z = origin[2]
+    @org.setter
+    def org(self, org):
+        self._rayhit.ray.org_x = org[0]
+        self._rayhit.ray.org_y = org[1]
+        self._rayhit.ray.org_z = org[2]
 
     @property
     def dir(self):
@@ -626,10 +626,10 @@ cdef class RayHit:
 
     def __repr__(self):
         return (
-            'RayHit(dir = %s, origin = %s, tfar = %s, tnear = %s, ' + \
+            'RayHit(dir = %s, org = %s, tfar = %s, tnear = %s, ' + \
             'geom_id = %d, inst_id = %d, normal = %s, prim_id = %d, uv = %s)'
         ) % (
-            self.dir, self.origin, self.tfar, self.tnear,
+            self.dir, self.org, self.tfar, self.tnear,
             self.geom_id, self.inst_id, self.normal, self.prim_id, self.uv
         )
 
@@ -658,7 +658,7 @@ cdef class RayHit1M:
         return np.asarray(<RTCRayHit[:self._M]> self._rayhit)
 
     @property
-    def origin(self):
+    def org(self):
         cdef float[:, :] mv = <float[:self._M, :3]> &self._rayhit[0].ray.org_x
         mv.strides[0] = sizeof(RTCRayHit)
         return np.asarray(mv)
