@@ -649,6 +649,10 @@ cdef class RayHit1M:
     def __dealloc__(self):
         free(self._rayhit)
 
+    @property
+    def size(self):
+        return self._M
+
     def toarray(self):
         return np.asarray(<RTCRayHit[:self._M]> self._rayhit)
 
@@ -768,7 +772,6 @@ cdef class Scene:
     def intersect1(self, IntersectContext context, RayHit rayhit):
         rtcIntersect1(self._scene, &context._context, &rayhit._rayhit)
 
-    # def intersect1M(self, ):
-    #     cdef unsigned M = len(rays)
-    #     cdef RTCIntersectContext context
-    #     rtcInitIntersectContext
+    def intersect1M(self, IntersectContext context, RayHit1M rayhit):
+        rtcIntersect1M(self._scene, &context._context, rayhit._rayhit,
+                       rayhit._M, sizeof(RTCRayHit))
