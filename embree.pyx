@@ -408,12 +408,16 @@ cdef array_from_ptr(void* ptr, fmt, item_count):
 cdef class Buffer:
     cdef:
         RTCBuffer _buffer
+        Device device
 
     def __cinit__(self, Device device, size_t byte_size):
         self._buffer = rtcNewBuffer(device._device, byte_size)
+        self.device = device
+        self.device.retain()
 
     def __dealloc__(self):
         self.release()
+        self.device.release()
 
     def retain(self):
         rtcRetainBuffer(self._buffer)
@@ -452,12 +456,16 @@ cdef class Device:
 cdef class Geometry:
     cdef:
         RTCGeometry _geometry
+        Device device
 
     def __cinit__(self, Device device, geometry_type):
         self._geometry = rtcNewGeometry(device._device, geometry_type.value)
+        self.device = device
+        self.device.retain()
 
     def __dealloc__(self):
         self.release()
+        self.device.release()
 
     def retain(self):
         rtcRetainGeometry(self._geometry)
@@ -857,12 +865,16 @@ cdef class IntersectContext:
 cdef class Scene:
     cdef:
         RTCScene _scene
+        Device device
 
     def __cinit__(self, Device device):
         self._scene = rtcNewScene(device._device)
+        self.device = device
+        self.device.retain()
 
     def __dealloc__(self):
         self.release()
+        self.device.release()
 
     def retain(self):
         rtcRetainScene(self._scene)
