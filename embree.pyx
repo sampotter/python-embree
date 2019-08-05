@@ -239,6 +239,9 @@ cdef extern from "embree3/rtcore.h":
     void rtcIntersect1(RTCScene, RTCIntersectContext*, RTCRayHit*)
     void rtcIntersect1M(RTCScene, RTCIntersectContext*, RTCRayHit*,
                         unsigned, size_t)
+    void rtcOccluded1(RTCScene, RTCIntersectContext*, RTCRay*)
+    void rtcOccluded1M(RTCScene, RTCIntersectContext*, RTCRay*, unsigned,
+                       size_t)
 
 INVALID_GEOMETRY_ID = <unsigned int> -1
 
@@ -890,3 +893,10 @@ cdef class Scene:
     def intersect1M(self, IntersectContext context, RayHit1M rayhit):
         rtcIntersect1M(self._scene, &context._context, rayhit._rayhit,
                        rayhit._M, sizeof(RTCRayHit))
+
+    def occluded1(self, IntersectContext context, Ray ray):
+        rtcOccluded1(self._scene, &context._context, &ray._ray)
+
+    def occluded1M(self, IntersectContext context, Ray1M ray):
+        rtcOccluded1M(self._scene, &context._context, ray._ray, ray._M,
+                      sizeof(RTCRay))
