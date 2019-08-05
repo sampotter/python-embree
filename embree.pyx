@@ -216,6 +216,9 @@ cdef extern from "embree3/rtcore.h":
     void rtcReleaseDevice(RTCDevice)
     RTCError rtcGetDeviceError(RTCDevice)
 
+    ctypedef void (*RTCErrorFunction)(void*, RTCError, const char*)
+    void rtcSetDeviceErrorFunction(RTCDevice, RTCErrorFunction, void*)
+
     RTCGeometry rtcNewGeometry(RTCDevice, RTCGeometryType)
     void rtcRetainGeometry(RTCGeometry)
     void rtcReleaseGeometry(RTCGeometry)
@@ -425,12 +428,19 @@ cdef class Buffer:
     def release(self):
         rtcReleaseBuffer(self._buffer)
 
+cdef void simple_error_function(void* userPtr, RTCError code, const char* str):
+    print('%s: %s' % (Error(code), str))
+
 cdef class Device:
     cdef:
         RTCDevice _device
 
     def __cinit__(self):
         self._device = rtcNewDevice(NULL)
+
+        # TODO: hardcode an error function until we decide on a nice
+        # way of exposing error functions to the library user
+        rtcSetDeviceErrorFunction(self._device, simple_error_function, NULL);
 
     def __dealloc__(self):
         self.release()
