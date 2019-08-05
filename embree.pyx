@@ -490,32 +490,73 @@ cdef class Ray:
     cdef:
         RTCRay _ray
 
-    def __cinit__(self, org, dir, tnear=0, tfar=np.inf):
+    @property
+    def org(self):
+        return np.asarray(<float[:3]> &self._ray.org_x)
+
+    @org.setter
+    def org(self, org):
         self._ray.org_x = org[0]
         self._ray.org_y = org[1]
         self._ray.org_z = org[2]
-        self._ray.tnear = tnear
-        self._ray.dir_x = dir[0]
-        self._ray.dir_y = dir[1]
-        self._ray.dir_z = dir[2]
-        self._ray.tfar = tfar
-        # TODO: this isn't finished
-
-    @property
-    def org(self):
-        return (self._ray.org_x, self._ray.org_y, self._ray.org_z)
-
-    @property
-    def dir(self):
-        return (self._ray.dir_x, self._ray.dir_y, self._ray.dir_z)
 
     @property
     def tnear(self):
         return self._ray.tnear
 
+    @tnear.setter
+    def tnear(self, float tnear):
+        self._ray.tnear = tnear
+
+    @property
+    def dir(self):
+        return np.asarray(<float[:3]> &self._ray.dir_x)
+
+    @dir.setter
+    def dir(self, dir):
+        self._ray.dir_x = dir[0]
+        self._ray.dir_y = dir[1]
+        self._ray.dir_z = dir[2]
+
+    @property
+    def time(self):
+        return self._ray.time
+
+    @time.setter
+    def time(self, float time):
+        self._ray.time = time
+
     @property
     def tfar(self):
         return self._ray.tfar
+
+    @tfar.setter
+    def tfar(self, float tfar):
+        self._ray.tfar = tfar
+
+    @property
+    def mask(self):
+        return self._ray.mask
+
+    @mask.setter
+    def mask(self, unsigned mask):
+        self._ray.mask = mask
+
+    @property
+    def id(self):
+        return self._ray.id
+
+    @id.setter
+    def id(self, unsigned id):
+        self._ray.id = id
+
+    @property
+    def flags(self):
+        return self._ray.flags
+
+    @flags.setter
+    def flags(self, unsigned flags):
+        self._ray.flags = flags
 
     def __repr__(self):
         return 'Ray(dir = %s, org = %s, tfar = %s, tnear = %s)' % (
