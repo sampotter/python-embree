@@ -468,13 +468,6 @@ cdef class Geometry:
     def commit(self):
         rtcCommitGeometry(self._geometry)
 
-    # def set_shared_buffer(self, buf_type, unsigned slot, fmt, arr):
-    #     arr_ = np.asarray(arr, dtype=arr.dtype)
-    #     cdef arr_.dtype[:] mv = arr_
-    #     rtcSetSharedGeometryBuffer(
-    #         self._geometry, buf_type.value, slot, fmt.value,
-    #         &mv[0], 0, arr_.strides[0], arr_.shape[0])
-
     def set_new_buffer(self, buf_type, unsigned slot, fmt,
                        size_t byte_stride, size_t item_count):
         if byte_stride % 4 != 0:
@@ -697,7 +690,6 @@ cdef class Ray1M:
     @property
     def size(self):
         return self._M
-
 
     def toarray(self):
         return np.asarray(<RTCRay[:self._M]> self._ray)
