@@ -674,6 +674,79 @@ cdef class RayHit:
             self.geom_id, self.inst_id, self.normal, self.prim_id, self.uv
         )
 
+cdef class Ray1M:
+    cdef:
+        RTCRay *_ray
+        unsigned _M
+
+    def __cinit__(self, unsigned M):
+        cdef size_t size = M*sizeof(RTCRay)
+        cdef int code = posix_memalign(<void **>&self._ray, 0x10, size)
+        if code == ENOMEM:
+            raise MemoryError('failed to allocate %d bytes' % (size,))
+        if code == EINVAL:
+            raise ValueError('bad alignment for posix_memalign')
+        self._M = M
+
+    def __dealloc__(self):
+        free(self._ray)
+
+    @property
+    def size(self):
+        return self._M
+
+
+    def toarray(self):
+        return np.asarray(<RTCRay[:self._M]> self._ray)
+
+    @property
+    def org(self):
+        cdef float[:, :] mv = <float[:self._M, :3]> &self._ray[0].org_x
+        mv.strides[0] = sizeof(RTCRay)
+        return np.asarray(mv)
+
+    @property
+    def tnear(self):
+        cdef float[:] mv = <float[:self._M]> &self._ray[0].tnear
+        mv.strides[0] = sizeof(RTCRay)
+        return np.asarray(mv)
+
+    @property
+    def dir(self):
+        cdef float[:, :] mv = <float[:self._M, :3]> &self._ray[0].dir_x
+        mv.strides[0] = sizeof(RTCRay)
+        return np.asarray(mv)
+
+    @property
+    def time(self):
+        cdef float[:] mv = <float[:self._M]> &self._ray[0].time
+        mv.strides[0] = sizeof(RTCRay)
+        return np.asarray(mv)
+
+    @property
+    def tfar(self):
+        cdef float[:] mv = <float[:self._M]> &self._ray[0].tfar
+        mv.strides[0] = sizeof(RTCRay)
+        return np.asarray(mv)
+
+    @property
+    def mask(self):
+        cdef unsigned[:] mv = <unsigned[:self._M]> &self._ray[0].mask
+        mv.strides[0] = sizeof(RTCRay)
+        return np.asarray(mv)
+
+    @property
+    def id(self):
+        cdef unsigned[:] mv = <unsigned[:self._M]> &self._ray[0].id
+        mv.strides[0] = sizeof(RTCRay)
+        return np.asarray(mv)
+
+    @property
+    def flags(self):
+        cdef unsigned[:] mv = <unsigned[:self._M]> &self._ray[0].flags
+        mv.strides[0] = sizeof(RTCRay)
+        return np.asarray(mv)
+
 cdef class RayHit1M:
     cdef:
         RTCRayHit *_rayhit
