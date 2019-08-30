@@ -416,11 +416,6 @@ cdef class Buffer:
     def __cinit__(self, Device device, size_t byte_size):
         self._buffer = rtcNewBuffer(device._device, byte_size)
         self.device = device
-        self.device.retain()
-
-    def __dealloc__(self):
-        self.release()
-        self.device.release()
 
     def retain(self):
         rtcRetainBuffer(self._buffer)
@@ -442,14 +437,8 @@ cdef class Device:
         # way of exposing error functions to the library user
         rtcSetDeviceErrorFunction(self._device, simple_error_function, NULL);
 
-    def __dealloc__(self):
-        self.release()
-
     def retain(self):
         rtcRetainDevice(self._device)
-
-    def release(self):
-        rtcReleaseDevice(self._device)
 
     def get_error(self):
         return Error(rtcGetDeviceError(self._device))
@@ -471,11 +460,6 @@ cdef class Geometry:
     def __cinit__(self, Device device, geometry_type):
         self._geometry = rtcNewGeometry(device._device, geometry_type.value)
         self.device = device
-        self.device.retain()
-
-    def __dealloc__(self):
-        self.release()
-        self.device.release()
 
     def retain(self):
         rtcRetainGeometry(self._geometry)
@@ -880,11 +864,6 @@ cdef class Scene:
     def __cinit__(self, Device device):
         self._scene = rtcNewScene(device._device)
         self.device = device
-        self.device.retain()
-
-    def __dealloc__(self):
-        self.release()
-        self.device.release()
 
     def retain(self):
         rtcRetainScene(self._scene)
