@@ -151,6 +151,13 @@ cdef extern from "embree3/rtcore.h":
         RTC_GEOMETRY_TYPE_USER = 120
         RTC_GEOMETRY_TYPE_INSTANCE = 121
 
+    cdef enum RTCSceneFlags:
+        RTC_SCENE_FLAG_NONE = 0,
+        RTC_SCENE_FLAG_DYNAMIC = (1 << 0)
+        RTC_SCENE_FLAG_COMPACT = (1 << 1)
+        RTC_SCENE_FLAG_ROBUST = (1 << 2)
+        RTC_SCENE_FLAG_CONTEXT_FILTER_FUNCTION = (1 << 3)
+
     cdef enum RTCIntersectContextFlags:
         RTC_INTERSECT_CONTEXT_FLAG_NONE = 0,
         RTC_INTERSECT_CONTEXT_FLAG_INCOHERENT = (0 << 0)
@@ -239,6 +246,8 @@ cdef extern from "embree3/rtcore.h":
     unsigned rtcAttachGeometry(RTCScene, RTCGeometry)
     void rtcDetachGeometry(RTCScene, unsigned)
     void rtcCommitScene(RTCScene)
+    void rtcSetSceneFlags(RTCScene, RTCSceneFlags)
+
     void rtcIntersect1(RTCScene, RTCIntersectContext*, RTCRayHit*)
     void rtcIntersect1M(RTCScene, RTCIntersectContext*, RTCRayHit*,
                         unsigned, size_t)
@@ -386,6 +395,13 @@ class GeometryType(Enum):
     OrientedDiscPoint = 52
     User = 120
     Instance = 121
+
+class SceneFlags(Enum):
+    NONE = 0
+    DYNAMIC = (1 << 0)
+    COMPACT = (1 << 1)
+    ROBUST = (1 << 2)
+    CONTEXT_FILTER_FUNCTION = (1 << 3)
 
 cdef typed_mv_from_ptr(void* ptr, fmt, size_t item_count):
     cdef float[:] float_mv
@@ -879,6 +895,11 @@ cdef class Scene:
 
     def commit(self):
         rtcCommitScene(self._scene)
+
+    def set_flags(self, flags):
+        if isinstance(flags, SceneFlags):
+            flags = flags.value
+        rtcSetSceneFlags(self._scene, flags)
 
     def intersect1(self, IntersectContext context, RayHit rayhit):
         rtcIntersect1(self._scene, &context._context, &rayhit._rayhit)
