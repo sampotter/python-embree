@@ -7,7 +7,9 @@ extensions = [
     Extension(
         'embree',
         ['embree.pyx'],
-        libraries=['embree3']
+        libraries=['embree3'],
+        include_dirs=['/opt/local/include'],
+        library_dirs=['/opt/local/lib']
     )
 ]
 
