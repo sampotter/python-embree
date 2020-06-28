@@ -359,9 +359,11 @@ class Format(Enum):
     def as_dtype(self):
         return {
             Format.Uint3: np.uint32,
+            Format.Uint4: np.uint32,
             Format.Int: np.int32,
             Format.Float: np.single,
-            Format.Float3: np.single
+            Format.Float3: np.single,
+            Format.Float4: np.single
         }[self]
 
     @property
@@ -371,7 +373,9 @@ class Format(Enum):
     def get_nelts(self):
         return {
             Format.Uint3: 3,
-            Format.Float3: 3
+            Format.Uint4: 4,
+            Format.Float3: 3,
+            Format.Float4: 4
         }[self]
 
     @property
@@ -410,13 +414,13 @@ cdef typed_mv_from_ptr(void* ptr, fmt, size_t item_count):
     cdef float[:] float_mv
     cdef unsigned[:] uint_mv
     cdef int[:] int_mv
-    if fmt in {Format.Uint3}:
+    if fmt in {Format.Uint3, Format.Uint4}:
         uint_mv = <unsigned[:fmt.nelts*item_count]>ptr
         return uint_mv
     elif fmt in {Format.Int}:
         int_mv = <int[:item_count]>ptr
         return int_mv
-    elif fmt in {Format.Float, Format.Float3}:
+    elif fmt in {Format.Float, Format.Float3, Format.Float4}:
         float_mv = <float[:fmt.nelts*item_count]>ptr
         return float_mv
 
