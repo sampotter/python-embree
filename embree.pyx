@@ -9,15 +9,38 @@ from libc.stdio cimport printf
 from libc.stdlib cimport free
 
 IF UNAME_SYSNAME == "Windows":
+    cdef extern from "<errno.h>":
+        cdef int ENOMEM = 12
     cdef extern from "<malloc.h>":
         cdef void *_aligned_malloc(size_t size, size_t alignment)
-    cdef void *aligned_alloc(size_t size, size_t alignment):
-        return _aligned_malloc(size, alignment)
+    cdef void *allocate_aligned(size_t size, size_t alignment):
+        errno = 0
+        cdef void *mem = _aligned_malloc(size, alignment)
+        if errno == ENOMEM:
+            raise Exception('failed to allocate')
+        elif errno != 0:
+            raise Exception('unhandled error')
+        return mem
 ELSE:
+    cdef extern from "<sys/errno.h>":
+        cdef int ENOMEM = 12
+        cdef int EINVAL = 22
     cdef extern from "<stdlib.h>":
-        cdef void *aligned_alloc(size_t size, size_t alignment)
+        int posix_memalign(void **memptr, size_t alignment, size_t size)
+    cdef void *allocate_aligned(size_t size, size_t alignment):
+        cdef void *mem
+        cdef int error = posix_memalign(&mem, alignment, size)
+        if error == EINVAL:
+            raise Exception('bad alignment')
+        elif error == ENOMEM:
+            raise Exception('failed to allocate')
+        elif error != 0:
+            raise Exception('unhandled error')
+        return mem
 
 DEF RTC_MAX_INSTANCE_LEVEL_COUNT = 1
+
+DEF ALIGNMENT = 1024
 
 cdef extern from "embree3/rtcore.h":
 
@@ -702,7 +725,7 @@ cdef class Ray1M:
 
     def __cinit__(self, unsigned M):
         cdef size_t size = M*sizeof(RTCRay)
-        self._ray = <RTCRay *>aligned_alloc(size, 0x10)
+        self._ray = <RTCRay *>allocate_aligned(size, ALIGNMENT)
         if self._ray == NULL:
             raise Exception('failed to allocate %d bytes' % (size,))
         self._M = M
@@ -772,9 +795,19 @@ cdef class RayHit1M:
 
     def __cinit__(self, unsigned M):
         cdef size_t size = M*sizeof(RTCRayHit)
-        self._rayhit = <RTCRayHit *>aligned_alloc(size, 0x10)
+        if size % ALIGNMENT != 0:
+            size = (size//ALIGNMENT + 1)*ALIGNMENT
+        errno = 0
+        self._rayhit = <RTCRayHit *>allocate_aligned(size, ALIGNMENT)
         if self._rayhit == NULL:
-            raise Exception('failed to allocate %d bytes' % (size,))
+            if errno == EINVAL:
+                raise Exception(
+                    'bad arguments to aligned_alloc: size = %d, align = %d (NOTE: sizeof(RTCRayHit) == %d)' % (
+                        size, ALIGNMENT, sizeof(RTCRayHit)))
+            elif errno == ENOMEM:
+                raise Exception('failed to allocate %d bytes' % (size,))
+            elif errno != 0:
+                raise Exception('unhandled error: errno == %d' % (errno,))
         self._M = M
 
     def __dealloc__(self):
