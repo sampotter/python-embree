@@ -14,7 +14,7 @@ IF UNAME_SYSNAME == "Windows":
     cdef void *aligned_alloc(size_t size, size_t alignment):
         return _aligned_malloc(size, alignment)
 ELSE:
-    cdef extern from "<malloc.h>":
+    cdef extern from "<stdlib.h>":
         cdef void *aligned_alloc(size_t size, size_t alignment)
 
 DEF RTC_MAX_INSTANCE_LEVEL_COUNT = 1
