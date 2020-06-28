@@ -8,11 +8,14 @@ from enum import Enum
 from libc.stdio cimport printf
 from libc.stdlib cimport free
 
-from posix.stdlib cimport posix_memalign
-
-cdef extern from "<errno.h>":
-    cdef int ENOMEM "ENOMEM"
-    cdef int EINVAL "EINVAL"
+IF UNAME_SYSNAME == "Windows":
+    cdef extern from "<malloc.h>":
+        cdef void *_aligned_malloc(size_t size, size_t alignment)
+    cdef void *aligned_alloc(size_t size, size_t alignment):
+        return _aligned_malloc(size, alignment)
+ELSE:
+    cdef extern from "<malloc.h>":
+        cdef void *aligned_alloc(size_t size, size_t alignment)
 
 DEF RTC_MAX_INSTANCE_LEVEL_COUNT = 1
 
@@ -695,11 +698,9 @@ cdef class Ray1M:
 
     def __cinit__(self, unsigned M):
         cdef size_t size = M*sizeof(RTCRay)
-        cdef int code = posix_memalign(<void **>&self._ray, 0x10, size)
-        if code == ENOMEM:
-            raise MemoryError('failed to allocate %d bytes' % (size,))
-        if code == EINVAL:
-            raise ValueError('bad alignment for posix_memalign')
+        self._ray = <RTCRay *>aligned_alloc(size, 0x10)
+        if self._ray == NULL:
+            raise Exception('failed to allocate %d bytes' % (size,))
         self._M = M
 
     def __dealloc__(self):
@@ -767,11 +768,9 @@ cdef class RayHit1M:
 
     def __cinit__(self, unsigned M):
         cdef size_t size = M*sizeof(RTCRayHit)
-        cdef int code = posix_memalign(<void **>&self._rayhit, 0x10, size)
-        if code == ENOMEM:
-            raise MemoryError('failed to allocate %d bytes' % (size,))
-        if code == EINVAL:
-            raise ValueError('bad alignment for posix_memalign')
+        self._rayhit = <RTCRayHit *>aligned_alloc(size, 0x10)
+        if self._rayhit == NULL:
+            raise Exception('failed to allocate %d bytes' % (size,))
         self._M = M
 
     def __dealloc__(self):
