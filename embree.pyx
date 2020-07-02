@@ -16,7 +16,9 @@ IF UNAME_SYSNAME == "Windows":
     cdef void *allocate_aligned(size_t size, size_t alignment):
         errno = 0
         cdef void *mem = _aligned_malloc(size, alignment)
-        if errno == ENOMEM:
+        if errno == EINVAL:
+            raise Exception('bad alignment')
+        elif errno == ENOMEM:
             raise Exception('failed to allocate')
         elif errno != 0:
             raise Exception('unhandled error')
