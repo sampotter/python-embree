@@ -11,6 +11,7 @@ from libc.stdlib cimport free
 IF UNAME_SYSNAME == "Windows":
     cdef extern from "<errno.h>":
         cdef int ENOMEM = 12
+        cdef int EINVAL = 22
     cdef extern from "<malloc.h>":
         cdef void *_aligned_malloc(size_t size, size_t alignment)
     cdef void *allocate_aligned(size_t size, size_t alignment):
