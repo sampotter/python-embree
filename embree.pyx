@@ -13,6 +13,12 @@ IF UNAME_SYSNAME == "Windows":
         cdef void *_aligned_malloc(size_t size, size_t alignment)
     cdef void *aligned_alloc(size_t size, size_t alignment):
         return _aligned_malloc(size, alignment)
+ELIF UNAME_SYSNAME == "Darwin":
+    # malloc is 16-byte mem aligned by default on Darwin
+    cdef extern from "<stdlib.h>":
+        cdef void *malloc(size_t size)
+    cdef void *aligned_alloc(size_t size, size_t alignment):
+        return malloc(size)
 ELSE:
     cdef extern from "<stdlib.h>":
         cdef void *aligned_alloc(size_t size, size_t alignment)
