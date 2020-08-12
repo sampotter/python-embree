@@ -1,6 +1,7 @@
-build
 *.c
+*.egg-info
+*.so
 *~
 __pycache__
+build
 dist
-*.egg-info
