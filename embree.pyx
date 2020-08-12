@@ -9,6 +9,14 @@ from enum import Enum
 from libc.stdio cimport printf
 from libc.stdlib cimport free
 
+# In this section, we define an aligned memory allocation function,
+# "aligned_alloc". This should be used throughout this .pyx file to
+# ensure that memory allocated for use by Embree is 16-byte
+# aligned. This must be done differently on each major platform.
+#
+# TODO: update the Windows and Darwin implementations of aligned_alloc
+# to ensure that they have the same "exception interface" as the Linux
+# version of aligned_alloc.
 IF UNAME_SYSNAME == "Windows":
     cdef extern from "<malloc.h>":
         cdef void *_aligned_malloc(size_t size, size_t alignment)
