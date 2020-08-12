@@ -1,6 +1,7 @@
 # cython: embedsignature=True
 # cython: language_level=3
 
+import errno
 import numpy as np
 
 from enum import Enum
@@ -20,8 +21,19 @@ ELIF UNAME_SYSNAME == "Darwin":
     cdef void *aligned_alloc(size_t size, size_t alignment):
         return malloc(size)
 ELSE:
-    cdef extern from "<stdlib.h>":
-        cdef void *aligned_alloc(size_t size, size_t alignment)
+    from posix.stdlib cimport posix_memalign
+    cdef void *aligned_alloc(size_t size, size_t alignment):
+        cdef void *ptr = NULL
+        cdef int code = posix_memalign(&ptr, alignment, size)
+        if code == errno.EINVAL:
+            raise Exception(
+                'posix_memalign: bad alignment (size = %, alignment = %)' % (
+                    size, alignment))
+        elif code == errno.ENOMEM:
+            raise Exception('posix_memalign: insufficient memory to allocate')
+        elif code != 0:
+            raise Exception('posix_memalign: unknown error code')
+        return ptr
 
 DEF RTC_MAX_INSTANCE_LEVEL_COUNT = 1
 
