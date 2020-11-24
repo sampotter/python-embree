@@ -34,3 +34,26 @@ $ python setup.py install
 ```
 
 to successfully compile and install python-embree.
+
+## Tips and tricks
+
+### Parallelism
+
+Using
+[multiprocessing](https://docs.python.org/3/library/multiprocessing.html)
+for concurrency in Python requires objects that are put into queues to
+be serialized using
+[pickle](https://docs.python.org/3/library/pickle.html). Unfortunately,
+it is not currently possible to serialize the Embree data structures
+(see the Embree repository's issues
+[#137](https://github.com/embree/embree/issues/137) and
+[#238](https://github.com/embree/embree/issues/238)), and there do not
+appear to be plans to support this feature. The rationale for not
+supporting this feature is that building the Embree BVH from scratch
+is usually faster than reading the equivalent amount of data from
+disk. Fair enough.
+
+To get around this problem, a simple fix is to wrap a bit of Embree
+functionality in a Python class with its own `__reduce__` method. For
+an example, see the implementation of TrimeshShapeModel
+[here](https://github.com/sampotter/python-flux/blob/master/flux/shape.py).
