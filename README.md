@@ -51,9 +51,13 @@ it is not currently possible to serialize the Embree data structures
 appear to be plans to support this feature. The rationale for not
 supporting this feature is that building the Embree BVH from scratch
 is usually faster than reading the equivalent amount of data from
-disk. Fair enough.
+disk.
 
-To get around this problem, a simple fix is to wrap a bit of Embree
-functionality in a Python class with its own `__reduce__` method. For
-an example, see the implementation of TrimeshShapeModel
+This means that you will not be able to use any of the extensions
+classes exported by
+[embree.pyx](https://github.com/sampotter/python-embree/blob/master/embree.pyx)
+(such as `embree.Device`, `embree.Scene`, etc.) with multiprocessing
+*directly*. To get around this problem, a simple fix is to wrap a bit
+of Embree functionality in a Python class with its own `__reduce__`
+method. For an example, see the implementation of TrimeshShapeModel
 [here](https://github.com/sampotter/python-flux/blob/master/flux/shape.py).
