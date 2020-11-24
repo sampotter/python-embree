@@ -59,5 +59,5 @@ classes exported by
 (such as `embree.Device`, `embree.Scene`, etc.) with multiprocessing
 *directly*. To get around this problem, a simple fix is to wrap a bit
 of Embree functionality in a Python class with its own `__reduce__`
-method. For an example, see the implementation of TrimeshShapeModel
+method. For an example, see the implementation of `TrimeshShapeModel`
 [here](https://github.com/sampotter/python-flux/blob/master/flux/shape.py).
