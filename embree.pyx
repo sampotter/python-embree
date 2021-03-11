@@ -488,6 +488,9 @@ cdef class Device:
     def retain(self):
         rtcRetainDevice(self._device)
 
+    def release(self):
+        rtcReleaseDevice(self._device)
+
     def get_error(self):
         return Error(rtcGetDeviceError(self._device))
 
