@@ -463,7 +463,6 @@ cdef class Buffer:
 
     def __cinit__(self, Device device, size_t byte_size):
         self._buffer = rtcNewBuffer(device._device, byte_size)
-        self.device = device
 
     def retain(self):
         rtcRetainBuffer(self._buffer)
@@ -510,7 +509,6 @@ cdef class Geometry:
 
     def __cinit__(self, Device device, geometry_type):
         self._geometry = rtcNewGeometry(device._device, geometry_type.value)
-        self.device = device
 
     def retain(self):
         rtcRetainGeometry(self._geometry)
@@ -910,7 +908,6 @@ cdef class Scene:
 
     def __cinit__(self, Device device):
         self._scene = rtcNewScene(device._device)
-        self.device = device
 
     def retain(self):
         rtcRetainScene(self._scene)
