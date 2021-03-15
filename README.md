@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/194721283.svg)](https://zenodo.org/badge/latestdoi/194721283)
+
 # python-embree #
 
 This library is a thin wrapper around Embree 3.
