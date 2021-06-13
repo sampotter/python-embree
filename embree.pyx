@@ -258,6 +258,7 @@ cdef extern from "embree3/rtcore.h":
     void rtcRetainGeometry(RTCGeometry)
     void rtcReleaseGeometry(RTCGeometry)
     void rtcCommitGeometry(RTCGeometry)
+    void rtcUpdateGeometryBuffer(RTCGeometry, RTCBufferType, unsigned)
     void rtcSetGeometryBuffer(RTCGeometry, RTCBufferType, unsigned,
                               RTCFormat, RTCBuffer, size_t, size_t, size_t)
     void rtcSetSharedGeometryBuffer(RTCGeometry, RTCBufferType, unsigned,
@@ -532,6 +533,10 @@ cdef class Geometry:
         cdef void* ptr = rtcGetGeometryBufferData(
             self._geometry, buf_type.value, slot)
         return array_from_ptr(ptr, fmt, item_count)
+    
+    def update_buffer(self, buf_type, unsigned slot):
+        rtcUpdateGeometryBuffer(self._geometry, buf_type.value, slot)
+
 
 cdef class Ray:
     cdef:
