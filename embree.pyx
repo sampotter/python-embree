@@ -467,6 +467,11 @@ class SceneFlags(Enum):
     ROBUST = (1 << 2)
     CONTEXT_FILTER_FUNCTION = (1 << 3)
 
+class IntersectContextFlags(Enum):
+    NONE = 0,
+    INCOHERENT = (0 << 0)
+    COHERENT = (1 << 0)
+
 cdef typed_mv_from_ptr(void* ptr, fmt, size_t item_count):
     cdef float[:] float_mv
     cdef unsigned[:] uint_mv
@@ -1072,6 +1077,16 @@ cdef class IntersectContext:
 
     def __cinit__(self):
         rtcInitIntersectContext(&self._context)
+
+    @property
+    def flags(self):
+        return IntersectContextFlags(self._context.flags)
+
+    @flags.setter
+    def flags(self, flags):
+        if not isinstance(flags, IntersectContextFlags):
+            raise ValueError('flags should be instance of IntersectContextFlags')
+        self._context.flags = flags.value
 
 cdef class Scene:
     cdef:
