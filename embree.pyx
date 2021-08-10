@@ -219,6 +219,34 @@ cdef extern from "embree3/rtcore.h":
         RTCRay ray
         RTCHit hit
 
+    cdef struct RTCRayNp:
+        float *org_x
+        float *org_y
+        float *org_z
+        float *tnear
+        float *dir_x
+        float *dir_y
+        float *dir_z
+        float *time
+        float *tfar
+        unsigned int *mask
+        unsigned int *id
+        unsigned int *flags
+
+    cdef struct RTCHitNp:
+        float *Ng_x
+        float *Ng_y
+        float *Ng_z
+        float *u
+        float *v
+        unsigned int *primID
+        unsigned int *geomID
+        unsigned int *instID[RTC_MAX_INSTANCE_LEVEL_COUNT]
+
+    cdef struct RTCRayHitNp:
+        RTCRayNp ray
+        RTCHitNp hit
+
     cdef struct RTCRayN:
         pass
 
@@ -283,6 +311,9 @@ cdef extern from "embree3/rtcore.h":
     void rtcOccluded1(RTCScene, RTCIntersectContext*, RTCRay*)
     void rtcOccluded1M(RTCScene, RTCIntersectContext*, RTCRay*, unsigned,
                        size_t)
+
+    void rtcIntersectNp(RTCScene, RTCIntersectContext*, RTCRayHitNp*, unsigned)
+
 
 INVALID_GEOMETRY_ID = <unsigned int> -1
 
@@ -533,7 +564,7 @@ cdef class Geometry:
         cdef void* ptr = rtcGetGeometryBufferData(
             self._geometry, buf_type.value, slot)
         return array_from_ptr(ptr, fmt, item_count)
-    
+
     def update_buffer(self, buf_type, unsigned slot):
         rtcUpdateGeometryBuffer(self._geometry, buf_type.value, slot)
 
@@ -898,6 +929,142 @@ cdef class RayHit1M:
         mv.strides[0] = sizeof(RTCRayHit)
         return np.asarray(mv)
 
+cdef class RayHitNp:
+    cdef:
+        RTCRayHitNp _rayhit
+        unsigned N
+
+    def __cinit__(self, unsigned N):
+        cdef RTCRayNp *ray = &self._rayhit.ray
+        ray.org_x = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.org_y = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.org_z = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.tnear = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.dir_x = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.dir_y = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.dir_z = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.time = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.tfar = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.mask = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
+        ray.id = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
+        ray.flags = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
+
+        cdef RTCHitNp *hit = &self._rayhit.hit
+        hit.Ng_x = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        hit.Ng_y = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        hit.Ng_z = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        hit.u = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        hit.v = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        hit.primID = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
+        hit.geomID = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
+        for i in range(RTC_MAX_INSTANCE_LEVEL_COUNT):
+            hit.instID[i] = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
+
+    def __dealloc__(self):
+        free(self._rayhit.ray.org_x)
+        free(self._rayhit.ray.org_y)
+        free(self._rayhit.ray.org_z)
+        free(self._rayhit.ray.tnear)
+        free(self._rayhit.ray.dir_x)
+        free(self._rayhit.ray.dir_y)
+        free(self._rayhit.ray.dir_z)
+        free(self._rayhit.ray.time)
+        free(self._rayhit.ray.tfar)
+        free(self._rayhit.ray.mask)
+        free(self._rayhit.ray.id)
+        free(self._rayhit.ray.flags)
+        free(self._rayhit.hit.Ng_x)
+        free(self._rayhit.hit.Ng_y)
+        free(self._rayhit.hit.Ng_z)
+        free(self._rayhit.hit.u)
+        free(self._rayhit.hit.v)
+        free(self._rayhit.hit.primID)
+        free(self._rayhit.hit.geomID)
+        for i in range(RTC_MAX_INSTANCE_LEVEL_COUNT):
+            free(self._rayhit.hit.instID[i])
+
+    @property
+    def size(self):
+        return self._N
+
+    @property
+    def org_x(self):
+        return np.asarray(<float[:self._N]>self._rayhit.ray.org_x)
+
+    @property
+    def org_y(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.org_y)
+
+    @property
+    def org_z(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.org_z)
+
+    @property
+    def tnear(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.tnear)
+
+    @property
+    def dir_x(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.dir_x)
+
+    @property
+    def dir_y(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.dir_y)
+
+    @property
+    def dir_z(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.dir_z)
+
+    @property
+    def mask(self):
+        np.asarray(<unsigned[:self._N]>self._rayhit.ray.mask)
+
+    @property
+    def flags(self):
+        np.asarray(<unsigned[:self._N]>self._rayhit.ray.flags)
+
+    @property
+    def time(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.time)
+
+    @property
+    def tfar(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.tfar)
+
+    @property
+    def Ng_x(self):
+        np.asarray(<float[:self._N]>self._rayhit.hit.Ng_x)
+
+    @property
+    def Ng_y(self):
+        np.asarray(<float[:self._N]>self._rayhit.hit.Ng_y)
+
+    @property
+    def Ng_z(self):
+        np.asarray(<float[:self._N]>self._rayhit.hit.Ng_z)
+
+    @property
+    def u(self):
+        np.asarray(<float[:self._N]>self._rayhit.hit.u)
+
+    @property
+    def v(self):
+        np.asarray(<float[:self._N]>self._rayhit.hit.v)
+
+    @property
+    def primID(self):
+        np.asarray(<unsigned[:self._N]>self._rayhit.hit.primID)
+
+    @property
+    def geomID(self):
+        np.asarray(<unsigned[:self._N]>self._rayhit.hit.geomID)
+
+    @property
+    def instID(self):
+        return tuple(
+            <unsigned[:self._N]>self._rayhit.hit.instID[i]
+            for i in range(RTC_MAX_INSTANCE_LEVEL_COUNT)
+        )
 
 cdef class IntersectContext:
     cdef:
@@ -940,6 +1107,10 @@ cdef class Scene:
     def intersect1M(self, IntersectContext context, RayHit1M rayhit):
         rtcIntersect1M(self._scene, &context._context, rayhit._rayhit,
                        rayhit._M, sizeof(RTCRayHit))
+
+    def intersectNp(self, IntersectContext context, RayHitNp rayhit):
+        rtcIntersectNp(self._scene, &context._context, &rayhit._rayhit,
+                       rayhit._N)
 
     def occluded1(self, IntersectContext context, Ray ray):
         rtcOccluded1(self._scene, &context._context, &ray._ray)
