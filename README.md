@@ -1,4 +1,5 @@
 [![DOI](https://zenodo.org/badge/194721283.svg)](https://zenodo.org/badge/latestdoi/194721283)
+[![Build Status](https://app.travis-ci.com/sampotter/python-embree.svg?branch=master)](https://app.travis-ci.com/sampotter/python-embree)
 
 # python-embree #
 
