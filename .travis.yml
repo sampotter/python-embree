@@ -1,5 +1,5 @@
 language: python
 install:
-  - pip install --user .
+  - pip install .
 script:
   - python -m unittest
