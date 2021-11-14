@@ -4,7 +4,7 @@ install:
   - pip install --upgrade pip
   - wget https://github.com/embree/embree/releases/download/v3.13.2/embree-3.13.2.x86_64.linux.tar.gz
   - tar xvf embree-3.13.2.x86_64.linux.tar.gz
-  - cd embree-3.13.2.x86_64.linux; source embree-vars.sh; cd -
+  - pushd embree-3.13.2.x86_64.linux; source embree-vars.sh; popd
   - pip install .
 script:
-  - python -m unittest
+  - python -m unittest discover tests
