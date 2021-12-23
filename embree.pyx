@@ -560,6 +560,7 @@ cdef class Geometry:
 
     def __cinit__(self, Device device, geometry_type):
         self._geometry = rtcNewGeometry(device._device, geometry_type.value)
+        self.device = device
 
     def retain(self):
         rtcRetainGeometry(self._geometry)
@@ -1108,10 +1109,11 @@ cdef class IntersectContext:
 cdef class Scene:
     cdef:
         RTCScene _scene
-        Device device
+        Device _device
 
     def __cinit__(self, Device device):
         self._scene = rtcNewScene(device._device)
+        self._device = device
 
     def retain(self):
         rtcRetainScene(self._scene)
