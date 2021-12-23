@@ -1,7 +1,8 @@
-import unittest
-
 import embree
 import numpy as np
+import unittest
+
+from pathlib import Path
 
 np.seterr('raise')
 
@@ -20,8 +21,10 @@ def mesh_from_vert_and_face_txt_files(verts_path, faces_path):
 
 class TestIntersect1M(unittest.TestCase):
     def setUp(self):
-        verts, faces = mesh_from_vert_and_face_txt_files(
-            'examples/sphere/verts.txt', 'examples/sphere/faces.txt')
+        npz_file = np.load(
+            Path(__file__).parent.absolute()/'examples'/'sphere'/'icosa_sphere_5.npz')
+
+        verts, faces = npz_file['V'], npz_file['F']
 
         self.verts = verts.astype(np.float32)
         self.num_verts = verts.shape[0]

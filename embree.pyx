@@ -179,6 +179,12 @@ cdef extern from "embree3/rtcore.h":
         RTC_GEOMETRY_TYPE_USER = 120
         RTC_GEOMETRY_TYPE_INSTANCE = 121
 
+    cdef enum RTCBuildQuality:
+        RTC_BUILD_QUALITY_LOW = 0,
+        RTC_BUILD_QUALITY_MEDIUM = 1,
+        RTC_BUILD_QUALITY_HIGH = 2,
+        RTC_BUILD_QUALITY_REFIT = 3
+
     cdef enum RTCSceneFlags:
         RTC_SCENE_FLAG_NONE = 0,
         RTC_SCENE_FLAG_DYNAMIC = (1 << 0)
@@ -287,6 +293,7 @@ cdef extern from "embree3/rtcore.h":
     void rtcReleaseGeometry(RTCGeometry)
     void rtcCommitGeometry(RTCGeometry)
     void rtcUpdateGeometryBuffer(RTCGeometry, RTCBufferType, unsigned)
+    void rtcSetGeometryBuildQuality(RTCGeometry, RTCBuildQuality)
     void rtcSetGeometryBuffer(RTCGeometry, RTCBufferType, unsigned,
                               RTCFormat, RTCBuffer, size_t, size_t, size_t)
     void rtcSetSharedGeometryBuffer(RTCGeometry, RTCBufferType, unsigned,
@@ -303,6 +310,7 @@ cdef extern from "embree3/rtcore.h":
     unsigned rtcAttachGeometry(RTCScene, RTCGeometry)
     void rtcDetachGeometry(RTCScene, unsigned)
     void rtcCommitScene(RTCScene)
+    void rtcSetSceneBuildQuality(RTCScene, RTCBuildQuality)
     void rtcSetSceneFlags(RTCScene, RTCSceneFlags)
 
     void rtcIntersect1(RTCScene, RTCIntersectContext*, RTCRayHit*)
@@ -460,12 +468,18 @@ class GeometryType(Enum):
     User = 120
     Instance = 121
 
+class BuildQuality(Enum):
+    Low = 0
+    Medium = 1
+    High = 2
+    Refit = 3
+
 class SceneFlags(Enum):
-    NONE = 0
-    DYNAMIC = (1 << 0)
-    COMPACT = (1 << 1)
-    ROBUST = (1 << 2)
-    CONTEXT_FILTER_FUNCTION = (1 << 3)
+    None_ = 0
+    Dynamic = (1 << 0)
+    Compact = (1 << 1)
+    Robust = (1 << 2)
+    ContextFilterFunction = (1 << 3)
 
 class IntersectContextFlags(Enum):
     NONE = 0,
@@ -546,12 +560,16 @@ cdef class Geometry:
 
     def __cinit__(self, Device device, geometry_type):
         self._geometry = rtcNewGeometry(device._device, geometry_type.value)
+        self.device = device
 
     def retain(self):
         rtcRetainGeometry(self._geometry)
 
     def release(self):
         rtcReleaseGeometry(self._geometry)
+
+    def set_build_quality(self, build_quality):
+        rtcSetGeometryBuildQuality(self._geometry, build_quality.value)
 
     def commit(self):
         rtcCommitGeometry(self._geometry)
@@ -1091,10 +1109,11 @@ cdef class IntersectContext:
 cdef class Scene:
     cdef:
         RTCScene _scene
-        Device device
+        Device _device
 
     def __cinit__(self, Device device):
         self._scene = rtcNewScene(device._device)
+        self._device = device
 
     def retain(self):
         rtcRetainScene(self._scene)
@@ -1107,6 +1126,9 @@ cdef class Scene:
 
     def detach_geometry(self, geom_id):
         rtcDetachGeometry(self._scene, geom_id)
+
+    def set_build_quality(self, build_quality):
+        rtcSetSceneBuildQuality(self._scene, build_quality.value)
 
     def commit(self):
         rtcCommitScene(self._scene)
