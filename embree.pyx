@@ -475,11 +475,11 @@ class BuildQuality(Enum):
     Refit = 3
 
 class SceneFlags(Enum):
-    NONE = 0
-    DYNAMIC = (1 << 0)
-    COMPACT = (1 << 1)
-    ROBUST = (1 << 2)
-    CONTEXT_FILTER_FUNCTION = (1 << 3)
+    None_ = 0
+    Dynamic = (1 << 0)
+    Compact = (1 << 1)
+    Robust = (1 << 2)
+    ContextFilterFunction = (1 << 3)
 
 class IntersectContextFlags(Enum):
     NONE = 0,
