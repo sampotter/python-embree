@@ -2,17 +2,17 @@
 set -xe
 
 # Fetch the archive from GitHub releases.
-wget -nv https://github.com/embree/embree/archive/v3.12.1.zip -O /tmp/embree.zip
+wget -nv https://github.com/embree/embree/archive/v3.13.2.zip -O /tmp/embree.zip
 
 # check the sha hash
-echo "ef4c6e4e1386e2e93fc46fc4546bf7a5f7c7f9dcd4a64b0041acdd11f4d1e830  /tmp/embree.zip" | sha256sum --check
+echo "eaa7a8ecd78594fb9eed75b2abbabd30dd68afb49556c250799daaeec016237c  /tmp/embree.zip" | sha256sum --check
 cd /tmp
 unzip -q embree.zip
-cd embree-3.12.1
+cd embree-3.13.2
 
 mkdir build
 cd build
-cmake .. -D EMBREE_ISPC_SUPPORT=0
+cmake -DEMBREE_ISPC_SUPPORT=0 ..
 
 make
 make install
