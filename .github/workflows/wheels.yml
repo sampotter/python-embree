@@ -10,7 +10,7 @@ jobs:
       CIBW_SKIP: pp* *-win32
       CIBW_TEST_REQUIRES: pytest numpy
       CIBW_TEST_COMMAND: pytest -v {project}/tests
-      CIBW_BEFORE_BUILD_LINUX: "yum install -y cmake tbb-devel glfw-devel wget; pip install cython; bash {project}/ci/embree3.bash"
+      CIBW_BEFORE_BUILD_LINUX: "yum install -y cmake glfw-devel wget; pip install cython tbb-devel; bash {project}/ci/embree3.bash"
     strategy:
       matrix:
         os: [ubuntu-latest]
