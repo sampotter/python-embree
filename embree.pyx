@@ -179,6 +179,12 @@ cdef extern from "embree3/rtcore.h":
         RTC_GEOMETRY_TYPE_USER = 120
         RTC_GEOMETRY_TYPE_INSTANCE = 121
 
+    cdef enum RTCBuildQuality:
+        RTC_BUILD_QUALITY_LOW = 0,
+        RTC_BUILD_QUALITY_MEDIUM = 1,
+        RTC_BUILD_QUALITY_HIGH = 2,
+        RTC_BUILD_QUALITY_REFIT = 3
+
     cdef enum RTCSceneFlags:
         RTC_SCENE_FLAG_NONE = 0,
         RTC_SCENE_FLAG_DYNAMIC = (1 << 0)
@@ -219,6 +225,34 @@ cdef extern from "embree3/rtcore.h":
         RTCRay ray
         RTCHit hit
 
+    cdef struct RTCRayNp:
+        float *org_x
+        float *org_y
+        float *org_z
+        float *tnear
+        float *dir_x
+        float *dir_y
+        float *dir_z
+        float *time
+        float *tfar
+        unsigned int *mask
+        unsigned int *id
+        unsigned int *flags
+
+    cdef struct RTCHitNp:
+        float *Ng_x
+        float *Ng_y
+        float *Ng_z
+        float *u
+        float *v
+        unsigned int *primID
+        unsigned int *geomID
+        unsigned int *instID[RTC_MAX_INSTANCE_LEVEL_COUNT]
+
+    cdef struct RTCRayHitNp:
+        RTCRayNp ray
+        RTCHitNp hit
+
     cdef struct RTCRayN:
         pass
 
@@ -258,6 +292,8 @@ cdef extern from "embree3/rtcore.h":
     void rtcRetainGeometry(RTCGeometry)
     void rtcReleaseGeometry(RTCGeometry)
     void rtcCommitGeometry(RTCGeometry)
+    void rtcUpdateGeometryBuffer(RTCGeometry, RTCBufferType, unsigned)
+    void rtcSetGeometryBuildQuality(RTCGeometry, RTCBuildQuality)
     void rtcSetGeometryBuffer(RTCGeometry, RTCBufferType, unsigned,
                               RTCFormat, RTCBuffer, size_t, size_t, size_t)
     void rtcSetSharedGeometryBuffer(RTCGeometry, RTCBufferType, unsigned,
@@ -274,6 +310,7 @@ cdef extern from "embree3/rtcore.h":
     unsigned rtcAttachGeometry(RTCScene, RTCGeometry)
     void rtcDetachGeometry(RTCScene, unsigned)
     void rtcCommitScene(RTCScene)
+    void rtcSetSceneBuildQuality(RTCScene, RTCBuildQuality)
     void rtcSetSceneFlags(RTCScene, RTCSceneFlags)
 
     void rtcIntersect1(RTCScene, RTCIntersectContext*, RTCRayHit*)
@@ -282,6 +319,9 @@ cdef extern from "embree3/rtcore.h":
     void rtcOccluded1(RTCScene, RTCIntersectContext*, RTCRay*)
     void rtcOccluded1M(RTCScene, RTCIntersectContext*, RTCRay*, unsigned,
                        size_t)
+
+    void rtcIntersectNp(RTCScene, RTCIntersectContext*, RTCRayHitNp*, unsigned)
+
 
 INVALID_GEOMETRY_ID = <unsigned int> -1
 
@@ -428,12 +468,23 @@ class GeometryType(Enum):
     User = 120
     Instance = 121
 
+class BuildQuality(Enum):
+    Low = 0
+    Medium = 1
+    High = 2
+    Refit = 3
+
 class SceneFlags(Enum):
-    NONE = 0
-    DYNAMIC = (1 << 0)
-    COMPACT = (1 << 1)
-    ROBUST = (1 << 2)
-    CONTEXT_FILTER_FUNCTION = (1 << 3)
+    None_ = 0
+    Dynamic = (1 << 0)
+    Compact = (1 << 1)
+    Robust = (1 << 2)
+    ContextFilterFunction = (1 << 3)
+
+class IntersectContextFlags(Enum):
+    NONE = 0,
+    INCOHERENT = (0 << 0)
+    COHERENT = (1 << 0)
 
 cdef typed_mv_from_ptr(void* ptr, fmt, size_t item_count):
     cdef float[:] float_mv
@@ -463,7 +514,6 @@ cdef class Buffer:
 
     def __cinit__(self, Device device, size_t byte_size):
         self._buffer = rtcNewBuffer(device._device, byte_size)
-        self.device = device
 
     def retain(self):
         rtcRetainBuffer(self._buffer)
@@ -487,6 +537,9 @@ cdef class Device:
 
     def retain(self):
         rtcRetainDevice(self._device)
+
+    def release(self):
+        rtcReleaseDevice(self._device)
 
     def get_error(self):
         return Error(rtcGetDeviceError(self._device))
@@ -515,6 +568,9 @@ cdef class Geometry:
     def release(self):
         rtcReleaseGeometry(self._geometry)
 
+    def set_build_quality(self, build_quality):
+        rtcSetGeometryBuildQuality(self._geometry, build_quality.value)
+
     def commit(self):
         rtcCommitGeometry(self._geometry)
 
@@ -531,6 +587,10 @@ cdef class Geometry:
         cdef void* ptr = rtcGetGeometryBufferData(
             self._geometry, buf_type.value, slot)
         return array_from_ptr(ptr, fmt, item_count)
+
+    def update_buffer(self, buf_type, unsigned slot):
+        rtcUpdateGeometryBuffer(self._geometry, buf_type.value, slot)
+
 
 cdef class Ray:
     cdef:
@@ -892,6 +952,142 @@ cdef class RayHit1M:
         mv.strides[0] = sizeof(RTCRayHit)
         return np.asarray(mv)
 
+cdef class RayHitNp:
+    cdef:
+        RTCRayHitNp _rayhit
+        unsigned N
+
+    def __cinit__(self, unsigned N):
+        cdef RTCRayNp *ray = &self._rayhit.ray
+        ray.org_x = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.org_y = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.org_z = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.tnear = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.dir_x = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.dir_y = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.dir_z = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.time = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.tfar = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        ray.mask = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
+        ray.id = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
+        ray.flags = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
+
+        cdef RTCHitNp *hit = &self._rayhit.hit
+        hit.Ng_x = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        hit.Ng_y = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        hit.Ng_z = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        hit.u = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        hit.v = <float *>aligned_alloc(N*sizeof(float), 0x10)
+        hit.primID = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
+        hit.geomID = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
+        for i in range(RTC_MAX_INSTANCE_LEVEL_COUNT):
+            hit.instID[i] = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
+
+    def __dealloc__(self):
+        free(self._rayhit.ray.org_x)
+        free(self._rayhit.ray.org_y)
+        free(self._rayhit.ray.org_z)
+        free(self._rayhit.ray.tnear)
+        free(self._rayhit.ray.dir_x)
+        free(self._rayhit.ray.dir_y)
+        free(self._rayhit.ray.dir_z)
+        free(self._rayhit.ray.time)
+        free(self._rayhit.ray.tfar)
+        free(self._rayhit.ray.mask)
+        free(self._rayhit.ray.id)
+        free(self._rayhit.ray.flags)
+        free(self._rayhit.hit.Ng_x)
+        free(self._rayhit.hit.Ng_y)
+        free(self._rayhit.hit.Ng_z)
+        free(self._rayhit.hit.u)
+        free(self._rayhit.hit.v)
+        free(self._rayhit.hit.primID)
+        free(self._rayhit.hit.geomID)
+        for i in range(RTC_MAX_INSTANCE_LEVEL_COUNT):
+            free(self._rayhit.hit.instID[i])
+
+    @property
+    def size(self):
+        return self._N
+
+    @property
+    def org_x(self):
+        return np.asarray(<float[:self._N]>self._rayhit.ray.org_x)
+
+    @property
+    def org_y(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.org_y)
+
+    @property
+    def org_z(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.org_z)
+
+    @property
+    def tnear(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.tnear)
+
+    @property
+    def dir_x(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.dir_x)
+
+    @property
+    def dir_y(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.dir_y)
+
+    @property
+    def dir_z(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.dir_z)
+
+    @property
+    def mask(self):
+        np.asarray(<unsigned[:self._N]>self._rayhit.ray.mask)
+
+    @property
+    def flags(self):
+        np.asarray(<unsigned[:self._N]>self._rayhit.ray.flags)
+
+    @property
+    def time(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.time)
+
+    @property
+    def tfar(self):
+        np.asarray(<float[:self._N]>self._rayhit.ray.tfar)
+
+    @property
+    def Ng_x(self):
+        np.asarray(<float[:self._N]>self._rayhit.hit.Ng_x)
+
+    @property
+    def Ng_y(self):
+        np.asarray(<float[:self._N]>self._rayhit.hit.Ng_y)
+
+    @property
+    def Ng_z(self):
+        np.asarray(<float[:self._N]>self._rayhit.hit.Ng_z)
+
+    @property
+    def u(self):
+        np.asarray(<float[:self._N]>self._rayhit.hit.u)
+
+    @property
+    def v(self):
+        np.asarray(<float[:self._N]>self._rayhit.hit.v)
+
+    @property
+    def primID(self):
+        np.asarray(<unsigned[:self._N]>self._rayhit.hit.primID)
+
+    @property
+    def geomID(self):
+        np.asarray(<unsigned[:self._N]>self._rayhit.hit.geomID)
+
+    @property
+    def instID(self):
+        return tuple(
+            <unsigned[:self._N]>self._rayhit.hit.instID[i]
+            for i in range(RTC_MAX_INSTANCE_LEVEL_COUNT)
+        )
 
 cdef class IntersectContext:
     cdef:
@@ -900,14 +1096,24 @@ cdef class IntersectContext:
     def __cinit__(self):
         rtcInitIntersectContext(&self._context)
 
+    @property
+    def flags(self):
+        return IntersectContextFlags(self._context.flags)
+
+    @flags.setter
+    def flags(self, flags):
+        if not isinstance(flags, IntersectContextFlags):
+            raise ValueError('flags should be instance of IntersectContextFlags')
+        self._context.flags = flags.value
+
 cdef class Scene:
     cdef:
         RTCScene _scene
-        Device device
+        Device _device
 
     def __cinit__(self, Device device):
         self._scene = rtcNewScene(device._device)
-        self.device = device
+        self._device = device
 
     def retain(self):
         rtcRetainScene(self._scene)
@@ -920,6 +1126,9 @@ cdef class Scene:
 
     def detach_geometry(self, geom_id):
         rtcDetachGeometry(self._scene, geom_id)
+
+    def set_build_quality(self, build_quality):
+        rtcSetSceneBuildQuality(self._scene, build_quality.value)
 
     def commit(self):
         rtcCommitScene(self._scene)
@@ -935,6 +1144,10 @@ cdef class Scene:
     def intersect1M(self, IntersectContext context, RayHit1M rayhit):
         rtcIntersect1M(self._scene, &context._context, rayhit._rayhit,
                        rayhit._M, sizeof(RTCRayHit))
+
+    def intersectNp(self, IntersectContext context, RayHitNp rayhit):
+        rtcIntersectNp(self._scene, &context._context, &rayhit._rayhit,
+                       rayhit._N)
 
     def occluded1(self, IntersectContext context, Ray ray):
         rtcOccluded1(self._scene, &context._context, &ray._ray)

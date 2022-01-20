@@ -1,3 +1,6 @@
+[![DOI](https://zenodo.org/badge/194721283.svg)](https://zenodo.org/badge/latestdoi/194721283)
+[![Build Status](https://app.travis-ci.com/sampotter/python-embree.svg?branch=master)](https://app.travis-ci.com/sampotter/python-embree)
+
 # python-embree #
 
 This library is a thin wrapper around Embree 3.
@@ -36,6 +39,21 @@ $ python setup.py install
 to successfully compile and install python-embree.
 
 ## Tips and tricks
+
+### Retain and release
+
+The underlying Embree library uses reference counting to properly
+clean up resources used by the different types it provides
+(`RTCDevice`, `RTCScene`, etc.). This means that each type exposes a
+pair of "retain" and "release" functions: e.g., `rtcRetainDevice`, and
+`rtcReleaseDevice`. How to use these correctly is spelled out in the
+[Embree API docs](https://www.embree.org/api.html) and the [many
+Embree tutorials](https://www.embree.org/tutorials.html). Please
+consult these when using
+[python-embree](https://github.com/sampotter/python-embree). The
+classes providing a lightweight object-oriented wrapper around
+Embree's types *do not call any retain or release functions behind the
+scenes: this is the user's responsibility*.
 
 ### Parallelism
 
