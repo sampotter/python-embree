@@ -11,7 +11,6 @@ jobs:
       CIBW_TEST_REQUIRES: pytest numpy
       CIBW_TEST_COMMAND: pytest -v {project}/tests
       CIBW_BEFORE_BUILD_LINUX: "yum install -y cmake glfw-devel wget; pip install cython; bash {project}/ci/embree3.bash"
-      CIBW_ENVIRONMENT_LINUX: "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/embree/include LIBRARY_PATH=$LIBRARY_PATH:/root/embree/lib"
     strategy:
       matrix:
         os: [ubuntu-latest]

@@ -8,8 +8,10 @@ extensions = [
         'embree',
         ['embree.pyx'],
         libraries=['embree3'],
-        include_dirs=['/opt/local/include'],
-        library_dirs=['/opt/local/lib']
+        include_dirs=['/opt/local/include',
+                      '/root/embree/include'],
+        library_dirs=['/opt/local/lib',
+                      '/root/embree/lib']
     )
 ]
 
