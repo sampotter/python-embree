@@ -1,18 +1,23 @@
+import os
+
 import embree
 import numpy as np
 import unittest
 
-from pathlib import Path
+
+cwd = os.path.expanduser(
+    os.path.abspath(os.path.dirname(__file__)))
+
 
 np.seterr('raise')
 
 
 class TestIntersect1M(unittest.TestCase):
     def setUp(self):
-        npz_file = np.load(
-            Path(__file__).parent.absolute() / 'examples' / 'sphere' / 'icosa_sphere_5.npz')
 
-        verts, faces = npz_file['V'], npz_file['F']
+        with open(os.path.join(cwd, 'data', 'sphere.npz'), 'rb') as f:
+            npz = np.load(f)
+            verts, faces = npz['V'], npz['F']
 
         self.verts = verts.astype(np.float32)
         self.num_verts = verts.shape[0]
