@@ -1,3 +1,6 @@
+
+import os
+
 from setuptools import find_packages, setup
 from setuptools.extension import Extension
 
@@ -9,9 +12,9 @@ extensions = [
         ['embree.pyx'],
         libraries=['embree3'],
         include_dirs=['/opt/local/include',
-                      '/root/embree/include'],
+                      os.path.expanduser('~/embree/include')],
         library_dirs=['/opt/local/lib',
-                      '/root/embree/lib']
+                      os.path.expanduser('~/embree/lib')]
     )
 ]
 
