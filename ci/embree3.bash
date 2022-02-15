@@ -2,7 +2,6 @@
 set -xe
 
 pip install tbb-devel
-
 PIPLOC="$(dirname `which pip`)"
 export TBB_DIR=$PIPLOC/../lib
 export TBB_INCLUDE_DIR=$PIPLOC/../include/tbb
@@ -18,7 +17,7 @@ cd embree-3.13.2
 
 mkdir build
 cd build
-cmake -DEMBREE_ISPC_SUPPORT=0 ..
+cmake -DEMBREE_ISPC_SUPPORT=0 -DTBB_DIR=$TBB_DIR -DTBB_INCLUDE_DIR=$TBB_INCLUDE_DIR ..
 
 make
 make install
