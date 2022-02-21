@@ -1,30 +1,23 @@
+import os
+
 import embree
 import numpy as np
 import unittest
 
-from pathlib import Path
+
+cwd = os.path.expanduser(
+    os.path.abspath(os.path.dirname(__file__)))
+
 
 np.seterr('raise')
 
-def mesh_from_vert_and_face_txt_files(verts_path, faces_path):
-    verts, faces = [], []
-
-    with open(verts_path, 'r') as f:
-        for line in f:
-            verts.append([float(_) for _ in line.split()])
-
-    with open(faces_path, 'r') as f:
-        for line in f:
-            faces.append([int(_) for _ in line.split()])
-
-    return np.array(verts, dtype=np.float64), np.array(faces, dtype=np.int64)
 
 class TestIntersect1M(unittest.TestCase):
     def setUp(self):
-        npz_file = np.load(
-            Path(__file__).parent.absolute()/'examples'/'sphere'/'icosa_sphere_5.npz')
 
-        verts, faces = npz_file['V'], npz_file['F']
+        with open(os.path.join(cwd, 'data', 'sphere.npz'), 'rb') as f:
+            npz = np.load(f)
+            verts, faces = npz['V'], npz['F']
 
         self.verts = verts.astype(np.float32)
         self.num_verts = verts.shape[0]
@@ -42,7 +35,7 @@ class TestIntersect1M(unittest.TestCase):
             embree.BufferType.Vertex,       # buf_type
             0,                              # slot
             embree.Format.Float3,           # fmt
-            3*np.dtype('float32').itemsize, # byte_stride
+            3 * np.dtype('float32').itemsize,  # byte_stride
             self.num_verts)                 # item_count
         vertex_buffer[:] = self.verts[:]
 
@@ -50,7 +43,7 @@ class TestIntersect1M(unittest.TestCase):
             embree.BufferType.Index,       # buf_type
             0,                             # slot
             embree.Format.Uint3,           # fmt
-            3*np.dtype('uint32').itemsize, # byte_stride,
+            3 * np.dtype('uint32').itemsize,  # byte_stride,
             self.num_faces)                # item count
         index_buffer[:] = self.faces[:]
 
@@ -83,14 +76,14 @@ class TestIntersect1M(unittest.TestCase):
         rayhit = embree.RayHit1M(N**2)
 
         for i in range(N):
-            rayhit.org[N*i:N*(i + 1)] = self.centroids[i]
+            rayhit.org[N * i:N * (i + 1)] = self.centroids[i]
 
         for i in range(N):
             D = self.centroids - self.centroids[i]
             dist = np.sqrt(np.sum(D**2, axis=1))
             dist[dist == 0] = np.inf
             D /= dist.reshape(-1, 1)
-            rayhit.dir[N*i:N*(i + 1)] = D
+            rayhit.dir[N * i:N * (i + 1)] = D
 
         rayhit.tnear[:] = 0.01
         rayhit.tfar[:] = np.inf
@@ -101,15 +94,16 @@ class TestIntersect1M(unittest.TestCase):
         self.scene.intersect1M(context, rayhit)
 
         for i in range(N):
-            geom_id = rayhit.geom_id[N*i:N*(i + 1)]
+            geom_id = rayhit.geom_id[N * i:N * (i + 1)]
             self.assertTrue(geom_id[i] == embree.INVALID_GEOMETRY_ID)
             J = np.setdiff1d(np.arange(N), [i])
             self.assertTrue((geom_id[J] != embree.INVALID_GEOMETRY_ID).all())
 
         for i in range(N):
-            prim_id = rayhit.prim_id[N*i:N*(i + 1)]
+            prim_id = rayhit.prim_id[N * i:N * (i + 1)]
             J = np.setdiff1d(np.arange(N), [i])
             self.assertTrue((prim_id[J] == np.arange(N)[J]).all())
+
 
 if __name__ == '__main__':
     unittest.main()
