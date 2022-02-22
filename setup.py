@@ -4,6 +4,9 @@ from setuptools import find_packages, setup
 from setuptools.extension import Extension
 from Cython.Build import cythonize
 
+# the current working directory
+cwd = os.path.abspath(os.path.expanduser(
+    os.path.dirname(__file__)))
 
 include = ['/opt/local/include',
            os.path.expanduser('~/embree/include')]
@@ -13,10 +16,10 @@ library = ['/opt/local/lib',
 if os.name == 'nt':
     include = [
         'c:/Program Files/Intel/Embree3/include',
-        'c:/embree/include']
+        os.path.join(cwd, 'embree3', 'include')]
     library = [
         'c:/Program Files/Intel/Embree3/lib',
-        'c:/embree/lib']
+        os.path.join(cwd, 'embree3', 'lib')]
 
 extensions = [
     Extension(
@@ -28,8 +31,6 @@ extensions = [
     )
 ]
 
-cwd = os.path.abspath(os.path.expanduser(
-    os.path.dirname(__file__)))
 with open(os.path.join(cwd, 'README.md'), 'r') as f:
     long_description = f.read()
 with open(os.path.join(cwd, 'embree', 'version.py'), 'r') as f:
