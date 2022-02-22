@@ -4,17 +4,27 @@ from setuptools import find_packages, setup
 from setuptools.extension import Extension
 from Cython.Build import cythonize
 
+
+include = ['/opt/local/include',
+           os.path.expanduser('~/embree/include')]
+library = ['/opt/local/lib',
+           os.path.expanduser('~/embree/lib')]
+
+if os.name == 'nt':
+    include = [
+        'c:/Program Files/Intel/Embree3/include',
+        'c:/embree/include']
+    library = [
+        'c:/Program Files/Intel/Embree3/lib',
+        'c:/embree/lib']
+
 extensions = [
     Extension(
         'embree',
         ['embree/embree.pyx'],
         libraries=['embree3'],
-        include_dirs=[
-            '/opt/local/include',
-            os.path.expanduser('~/embree/include')],
-        library_dirs=[
-            '/opt/local/lib',
-            os.path.expanduser('~/embree/lib')]
+        include_dirs=include,
+        library_dirs=library
     )
 ]
 

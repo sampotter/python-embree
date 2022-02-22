@@ -11,11 +11,12 @@ jobs:
       CIBW_ARCHS: auto64
       CIBW_TEST_REQUIRES: pytest numpy
       CIBW_TEST_COMMAND: pytest -v {project}/tests
+      CIBW_BEFORE_BUILD_WINDOWS: "{project}/ci/embree3.bat"
       CIBW_BEFORE_BUILD_LINUX: "yum install -y cmake wget; pip install cython; bash {project}/ci/embree3.bash"
       CIBW_REPAIR_WHEEL_COMMAND_LINUX: "LD_LIBRARY_PATH=/root/embree/lib; auditwheel repair -w {dest_dir} {wheel}"
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest]
     steps:
     - uses: actions/checkout@v1
     - uses: actions/setup-python@v1
@@ -33,6 +34,7 @@ jobs:
         name: wheels
         path: ./wheelhouse
     - name: Upload To PyPi
+      if: false
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
