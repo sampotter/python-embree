@@ -34,10 +34,8 @@ jobs:
         path: ./wheelhouse
     - name: Upload To PyPi
       env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      # TODO : remove `if false` statement after secrets are set in Github UI
-      if: false
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
       run: |
         pip install twine
         twine upload ./wheelhouse/*
