@@ -13,6 +13,8 @@ jobs:
       CIBW_TEST_COMMAND: pytest -v {project}/tests
       CIBW_BEFORE_BUILD_LINUX: "yum install -y cmake wget; pip install cython; bash {project}/ci/embree3.bash"
       CIBW_REPAIR_WHEEL_COMMAND_LINUX: "LD_LIBRARY_PATH=/root/embree/lib; auditwheel repair -w {dest_dir} {wheel}"
+      CIBW_BEFORE_BUILD_WINDOWS: "pip install delvewheel"
+      CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "delvewheel repair -w {dest_dir} {wheel}"
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
