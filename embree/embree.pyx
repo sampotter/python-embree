@@ -27,7 +27,7 @@ IF UNAME_SYSNAME == "Windows":
     # must be freed with _aligned_free()
     # while posix_memalign() just uses regular free()
     cdef void free(void *memblock):
-        return _aligned_free(memblock)
+        _aligned_free(memblock)
 ELIF UNAME_SYSNAME == "Darwin":
     # malloc is 16-byte mem aligned by default on Darwin
     from libc.stdlib cimport malloc
