@@ -9,6 +9,8 @@ from enum import Enum
 from libc.stdio cimport printf
 from libc.stdlib cimport free
 
+__version__ = '0.0.3'
+
 # In this section, we define an aligned memory allocation function,
 # "aligned_alloc". This should be used throughout this .pyx file to
 # ensure that memory allocated for use by Embree is 16-byte

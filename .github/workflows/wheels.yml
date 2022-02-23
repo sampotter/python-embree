@@ -39,7 +39,6 @@ jobs:
         name: wheels
         path: ./wheelhouse
     - name: Upload To PyPi
-      if: false
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}

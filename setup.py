@@ -24,7 +24,7 @@ if os.name == 'nt':
 extensions = [
     Extension(
         'embree',
-        ['embree/embree.pyx'],
+        ['embree.pyx'],
         libraries=['embree3'],
         include_dirs=include,
         library_dirs=library
@@ -33,10 +33,11 @@ extensions = [
 
 with open(os.path.join(cwd, 'README.md'), 'r') as f:
     long_description = f.read()
-with open(os.path.join(cwd, 'embree', 'version.py'), 'r') as f:
+with open(os.path.join(cwd, 'embree.pyx'), 'r') as f:
     # use eval to get a clean string of version from file
-    __version__ = eval(f.read().strip().split('=')[-1])
-
+    __version__ = eval(
+        next(line for line in f if
+             line.startswith('__version__')).split('=')[-1])
 
 setup(
     name='embree',
