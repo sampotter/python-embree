@@ -20,7 +20,7 @@ from libc.stdlib cimport free
 IF UNAME_SYSNAME == "Windows":
     cdef extern from "<malloc.h>":
         cdef void *_aligned_malloc(size_t size, size_t alignment)
-	cdef void _aligned_free(void *memblock)
+    cdef void _aligned_free(void *memblock)
     cdef void *aligned_alloc(size_t size, size_t alignment):
         return _aligned_malloc(size, alignment)
     # memory obtained from _aligned_malloc()
