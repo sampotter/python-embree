@@ -9,6 +9,8 @@ from enum import Enum
 from libc.stdio cimport printf
 from libc.stdlib cimport free
 
+__version__ = '0.0.3'
+
 # In this section, we define an aligned memory allocation function,
 # "aligned_alloc". This should be used throughout this .pyx file to
 # ensure that memory allocated for use by Embree is 16-byte
@@ -20,13 +22,21 @@ from libc.stdlib cimport free
 IF UNAME_SYSNAME == "Windows":
     cdef extern from "<malloc.h>":
         cdef void *_aligned_malloc(size_t size, size_t alignment)
+        cdef void _aligned_free(void *memblock)
     cdef void *aligned_alloc(size_t size, size_t alignment):
         return _aligned_malloc(size, alignment)
+    # memory obtained from _aligned_malloc()
+    # must be freed with _aligned_free()
+    # while posix_memalign() just uses regular free()
+    cdef void aligned_free(void *memblock):
+        _aligned_free(memblock)
 ELIF UNAME_SYSNAME == "Darwin":
     # malloc is 16-byte mem aligned by default on Darwin
     from libc.stdlib cimport malloc
     cdef void *aligned_alloc(size_t size, size_t alignment):
         return malloc(size)
+    cdef void aligned_free(void *memblock):
+        free(memblock)
 ELSE:
     from posix.stdlib cimport posix_memalign
     cdef void *aligned_alloc(size_t size, size_t alignment):
@@ -41,6 +51,8 @@ ELSE:
         elif code != 0:
             raise Exception('posix_memalign: unknown error code')
         return ptr
+    cdef void aligned_free(void *memblock):
+        free(memblock)
 
 DEF RTC_MAX_INSTANCE_LEVEL_COUNT = 1
 
@@ -793,7 +805,7 @@ cdef class Ray1M:
         self._M = M
 
     def __dealloc__(self):
-        free(self._ray)
+        aligned_free(self._ray)
 
     @property
     def size(self):
@@ -863,7 +875,7 @@ cdef class RayHit1M:
         self._M = M
 
     def __dealloc__(self):
-        free(self._rayhit)
+        aligned_free(self._rayhit)
 
     @property
     def size(self):
@@ -984,27 +996,27 @@ cdef class RayHitNp:
             hit.instID[i] = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
 
     def __dealloc__(self):
-        free(self._rayhit.ray.org_x)
-        free(self._rayhit.ray.org_y)
-        free(self._rayhit.ray.org_z)
-        free(self._rayhit.ray.tnear)
-        free(self._rayhit.ray.dir_x)
-        free(self._rayhit.ray.dir_y)
-        free(self._rayhit.ray.dir_z)
-        free(self._rayhit.ray.time)
-        free(self._rayhit.ray.tfar)
-        free(self._rayhit.ray.mask)
-        free(self._rayhit.ray.id)
-        free(self._rayhit.ray.flags)
-        free(self._rayhit.hit.Ng_x)
-        free(self._rayhit.hit.Ng_y)
-        free(self._rayhit.hit.Ng_z)
-        free(self._rayhit.hit.u)
-        free(self._rayhit.hit.v)
-        free(self._rayhit.hit.primID)
-        free(self._rayhit.hit.geomID)
+        aligned_free(self._rayhit.ray.org_x)
+        aligned_free(self._rayhit.ray.org_y)
+        aligned_free(self._rayhit.ray.org_z)
+        aligned_free(self._rayhit.ray.tnear)
+        aligned_free(self._rayhit.ray.dir_x)
+        aligned_free(self._rayhit.ray.dir_y)
+        aligned_free(self._rayhit.ray.dir_z)
+        aligned_free(self._rayhit.ray.time)
+        aligned_free(self._rayhit.ray.tfar)
+        aligned_free(self._rayhit.ray.mask)
+        aligned_free(self._rayhit.ray.id)
+        aligned_free(self._rayhit.ray.flags)
+        aligned_free(self._rayhit.hit.Ng_x)
+        aligned_free(self._rayhit.hit.Ng_y)
+        aligned_free(self._rayhit.hit.Ng_z)
+        aligned_free(self._rayhit.hit.u)
+        aligned_free(self._rayhit.hit.v)
+        aligned_free(self._rayhit.hit.primID)
+        aligned_free(self._rayhit.hit.geomID)
         for i in range(RTC_MAX_INSTANCE_LEVEL_COUNT):
-            free(self._rayhit.hit.instID[i])
+            aligned_free(self._rayhit.hit.instID[i])
 
     @property
     def size(self):
