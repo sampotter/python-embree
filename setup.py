@@ -9,23 +9,23 @@ cwd = os.path.abspath(os.path.expanduser(
     os.path.dirname(__file__)))
 
 include = ['/opt/local/include',
-           os.path.expanduser('~/embree/include')]
+           os.path.expanduser('~/embree4/include')]
 library = ['/opt/local/lib',
-           os.path.expanduser('~/embree/lib')]
+           os.path.expanduser('~/embree4/lib')]
 
 if os.name == 'nt':
     include = [
-        'c:/Program Files/Intel/Embree3/include',
-        os.path.join(cwd, 'embree', 'include')]
+        'c:/Program Files/Intel/Embree4/include',
+        os.path.join(cwd, 'embree4', 'include')]
     library = [
-        'c:/Program Files/Intel/Embree3/lib',
-        os.path.join(cwd, 'embree', 'lib')]
+        'c:/Program Files/Intel/Embree4/lib',
+        os.path.join(cwd, 'embree4', 'lib')]
 
 extensions = [
     Extension(
         'embree',
         ['embree.pyx'],
-        libraries=['embree'],
+        libraries=['embree4'],
         include_dirs=include,
         library_dirs=library
     )

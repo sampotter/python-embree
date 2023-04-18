@@ -56,7 +56,7 @@ ELSE:
 
 DEF RTC_MAX_INSTANCE_LEVEL_COUNT = 1
 
-cdef extern from "embree3/rtcore.h":
+cdef extern from "embree4/rtcore.h":
 
     cdef struct RTCBufferTy:
         pass
