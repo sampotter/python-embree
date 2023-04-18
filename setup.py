@@ -16,16 +16,16 @@ library = ['/opt/local/lib',
 if os.name == 'nt':
     include = [
         'c:/Program Files/Intel/Embree3/include',
-        os.path.join(cwd, 'embree3', 'include')]
+        os.path.join(cwd, 'embree', 'include')]
     library = [
         'c:/Program Files/Intel/Embree3/lib',
-        os.path.join(cwd, 'embree3', 'lib')]
+        os.path.join(cwd, 'embree', 'lib')]
 
 extensions = [
     Extension(
         'embree',
         ['embree.pyx'],
-        libraries=['embree3'],
+        libraries=['embree'],
         include_dirs=include,
         library_dirs=library
     )
