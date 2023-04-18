@@ -1,7 +1,7 @@
 #!/bin/bash
 set -xe
 
-VERSION="3.13.3"
+VERSION="4.0.1"
 
 rm -rf /tmp/embree.tar.gz
 rm -rf ~/embree

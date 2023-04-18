@@ -11,7 +11,7 @@ jobs:
       CIBW_ARCHS: auto64
       CIBW_TEST_REQUIRES: pytest numpy
       CIBW_TEST_COMMAND: pytest -v {project}/tests
-      CIBW_BEFORE_BUILD_LINUX: "yum install -y cmake wget; pip install cython; bash {project}/ci/embree3.bash"
+      CIBW_BEFORE_BUILD_LINUX: "yum install -y cmake wget; pip install cython; bash {project}/ci/embree.bash"
       CIBW_REPAIR_WHEEL_COMMAND_LINUX: "LD_LIBRARY_PATH=/root/embree/lib; auditwheel repair -w {dest_dir} {wheel}"
       CIBW_BEFORE_BUILD_WINDOWS: "pip install delvewheel"
       CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "delvewheel repair --add-path embree3\\bin; --no-mangle tbb12.dll;embree3.dll -w {dest_dir} {wheel}"
@@ -19,18 +19,18 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-    - uses: actions/checkout@v1
-    - uses: actions/setup-python@v1
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
       name: Install Python
       with:
-        python-version: '3.7'
+        python-version: '3.11'
     - name: Install cibuildwheel
       run: |
-        python -m pip install cibuildwheel==2.3.1
+        python -m pip install cibuildwheel==2.12.2
     - name: Install Embree On Windows
       if: matrix.os == 'windows-latest'
       run: |
-        ci/embree3.bat
+        ci/embree.bat
     - name: Build wheels
       run: |
         python -m cibuildwheel --output-dir wheelhouse
