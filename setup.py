@@ -23,8 +23,8 @@ if os.name == 'nt':
 
 extensions = [
     Extension(
-        'embree',
-        ['embree.pyx'],
+        'embree.wrapper',
+        sources = ['embree/wrapper.pyx'],
         libraries=['embree4'],
         include_dirs=include,
         library_dirs=library
@@ -33,7 +33,7 @@ extensions = [
 
 with open(os.path.join(cwd, 'README.md'), 'r') as f:
     long_description = f.read()
-with open(os.path.join(cwd, 'embree.pyx'), 'r') as f:
+with open(os.path.join(cwd, 'embree', 'wrapper.pyx'), 'r') as f:
     # use eval to get a clean string of version from file
     __version__ = eval(
         next(line for line in f if
