@@ -10,7 +10,7 @@ from libc.stdio cimport printf
 from libc.stdlib cimport free
 
 # https://github.com/embree/embree/blob/0fcb306c9176221219dd15e27fe0527ed334948f/doc/src/api.md?plain=1#L290
-__version__ = '0.0.3'
+__version__ = '4.1.0'
 
 # In this section, we define an aligned memory allocation function,
 # "aligned_alloc". This should be used throughout this .pyx file to
