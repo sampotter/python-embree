@@ -1,6 +1,12 @@
 #!/bin/bash
 set -xe
 
+
+# if embree4 exits exit early
+if [ -d "~/embree4" ]; then
+   exit 0;
+fi
+
 VERSION="4.1.0"
 
 rm -rf /tmp/embree.tar.gz
