@@ -3,7 +3,7 @@ set -xe
 
 
 # if embree4 exits exit early
-if [ -d "~/embree4" ]; then
+if [ -d "/root/embree4" ]; then
    exit 0;
 fi
 
