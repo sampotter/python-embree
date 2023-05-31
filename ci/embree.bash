@@ -1,7 +1,13 @@
 #!/bin/bash
 set -xe
 
-VERSION="3.13.3"
+
+# if embree4 exits exit early
+if [ -d "/root/embree4" ]; then
+   exit 0;
+fi
+
+VERSION="4.1.0"
 
 rm -rf /tmp/embree.tar.gz
 rm -rf ~/embree
@@ -11,6 +17,6 @@ cd /tmp
 tar -zxvf embree.tar.gz
 rm -f embree.tar.gz
 
-mv embree-${VERSION}.x86_64.linux ~/embree
+mv embree-${VERSION}.x86_64.linux ~/embree4
 
 

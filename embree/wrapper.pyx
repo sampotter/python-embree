@@ -9,7 +9,8 @@ from enum import Enum
 from libc.stdio cimport printf
 from libc.stdlib cimport free
 
-__version__ = '0.0.3'
+# https://github.com/embree/embree/blob/0fcb306c9176221219dd15e27fe0527ed334948f/doc/src/api.md?plain=1#L290
+__version__ = '4.1.0'
 
 # In this section, we define an aligned memory allocation function,
 # "aligned_alloc". This should be used throughout this .pyx file to
@@ -56,7 +57,7 @@ ELSE:
 
 DEF RTC_MAX_INSTANCE_LEVEL_COUNT = 1
 
-cdef extern from "embree3/rtcore.h":
+cdef extern from "embree4/rtcore.h":
 
     cdef struct RTCBufferTy:
         pass
@@ -204,10 +205,14 @@ cdef extern from "embree3/rtcore.h":
         RTC_SCENE_FLAG_ROBUST = (1 << 2)
         RTC_SCENE_FLAG_CONTEXT_FILTER_FUNCTION = (1 << 3)
 
-    cdef enum RTCIntersectContextFlags:
-        RTC_INTERSECT_CONTEXT_FLAG_NONE = 0,
-        RTC_INTERSECT_CONTEXT_FLAG_INCOHERENT = (0 << 0)
-        RTC_INTERSECT_CONTEXT_FLAG_COHERENT = (1 << 0)
+    cdef enum RTCRayQueryFlags:
+          # matching intel_ray_flags_t layout
+        RTC_RAY_QUERY_FLAG_NONE       = 0,
+        RTC_RAY_QUERY_FLAG_INVOKE_ARGUMENT_FILTER = (1 << 1) # enable argument filter for each geometry
+
+        # embree specific flags 
+        RTC_RAY_QUERY_FLAG_INCOHERENT = (0 << 16) # optimize for incoherent rays
+        RTC_RAY_QUERY_FLAG_COHERENT   = (1 << 16) # optimize for coherent rays
 
     cdef struct RTCRay:
         float org_x
@@ -237,33 +242,6 @@ cdef extern from "embree3/rtcore.h":
         RTCRay ray
         RTCHit hit
 
-    cdef struct RTCRayNp:
-        float *org_x
-        float *org_y
-        float *org_z
-        float *tnear
-        float *dir_x
-        float *dir_y
-        float *dir_z
-        float *time
-        float *tfar
-        unsigned int *mask
-        unsigned int *id
-        unsigned int *flags
-
-    cdef struct RTCHitNp:
-        float *Ng_x
-        float *Ng_y
-        float *Ng_z
-        float *u
-        float *v
-        unsigned int *primID
-        unsigned int *geomID
-        unsigned int *instID[RTC_MAX_INSTANCE_LEVEL_COUNT]
-
-    cdef struct RTCRayHitNp:
-        RTCRayNp ray
-        RTCHitNp hit
 
     cdef struct RTCRayN:
         pass
@@ -271,20 +249,36 @@ cdef extern from "embree3/rtcore.h":
     cdef struct RTCHitN:
         pass
 
+    cdef struct RTCRayQueryContext:
+        unsigned int instID[RTC_MAX_INSTANCE_LEVEL_COUNT]
+
     cdef struct RTCFilterFunctionNArguments:
         int* valid
         void* geometryUserPtr
-        const RTCIntersectContext* context
+        const RTCRayQueryContext* context
         RTCRayN* ray
         RTCHitN* hit
         unsigned int N
 
     ctypedef void(*RTCFilterFunctionN)(const RTCFilterFunctionNArguments*)
 
-    cdef struct RTCIntersectContext:
-        RTCIntersectContextFlags flags
-        RTCFilterFunctionN filter
-        unsigned int instID[RTC_MAX_INSTANCE_LEVEL_COUNT]
+    cdef struct RTCIntersectArguments:
+        RTCRayQueryFlags flags     # intersection flags
+        #RTCFeatureFlags feature_mask       # selectively enable features for traversal
+        const RTCRayQueryContext* context     # optional pointer to ray query context
+        RTCFilterFunctionN filter         # filter function to execute
+        #RTCIntersectFunctionN intersect    # user geometry intersection callback to execute
+
+    cdef struct RTCFilterFunctionNArguments:
+        int* valid
+        void* geometryUserPtr
+        const RTCRayQueryContext* context
+        RTCRayN* ray
+        RTCHitN* hit
+        unsigned int N
+
+
+
 
     RTCBuffer rtcNewBuffer(RTCDevice, size_t)
     RTCBuffer rtcNewSharedBuffer(RTCDevice, void*, size_t)
@@ -314,7 +308,7 @@ cdef extern from "embree3/rtcore.h":
                                   RTCFormat, size_t, size_t)
     void* rtcGetGeometryBufferData(RTCGeometry, RTCBufferType, unsigned)
 
-    void rtcInitIntersectContext(RTCIntersectContext*)
+    void rtcInitRayQueryContext(RTCRayQueryContext*)
 
     RTCScene rtcNewScene(RTCDevice)
     void rtcRetainScene(RTCScene)
@@ -325,15 +319,9 @@ cdef extern from "embree3/rtcore.h":
     void rtcSetSceneBuildQuality(RTCScene, RTCBuildQuality)
     void rtcSetSceneFlags(RTCScene, RTCSceneFlags)
 
-    void rtcIntersect1(RTCScene, RTCIntersectContext*, RTCRayHit*)
-    void rtcIntersect1M(RTCScene, RTCIntersectContext*, RTCRayHit*,
-                        unsigned, size_t)
-    void rtcOccluded1(RTCScene, RTCIntersectContext*, RTCRay*)
-    void rtcOccluded1M(RTCScene, RTCIntersectContext*, RTCRay*, unsigned,
-                       size_t)
-
-    void rtcIntersectNp(RTCScene, RTCIntersectContext*, RTCRayHitNp*, unsigned)
-
+    void rtcIntersect1(RTCScene, RTCRayQueryContext*, RTCRayHit*)
+    
+    void rtcOccluded1(RTCScene, RTCRayQueryContext*, RTCRay*)
 
 INVALID_GEOMETRY_ID = <unsigned int> -1
 
@@ -792,321 +780,14 @@ cdef class RayHit:
             self.geom_id, self.inst_id, self.normal, self.prim_id, self.uv
         )
 
-cdef class Ray1M:
-    cdef:
-        RTCRay *_ray
-        unsigned _M
 
-    def __cinit__(self, unsigned M):
-        cdef size_t size = M*sizeof(RTCRay)
-        self._ray = <RTCRay *>aligned_alloc(size, 0x10)
-        if self._ray == NULL:
-            raise Exception('failed to allocate %d bytes' % (size,))
-        self._M = M
-
-    def __dealloc__(self):
-        aligned_free(self._ray)
-
-    @property
-    def size(self):
-        return self._M
-
-    def toarray(self):
-        return np.asarray(<RTCRay[:self._M]> self._ray)
-
-    @property
-    def org(self):
-        cdef float[:, :] mv = <float[:self._M, :3]> &self._ray[0].org_x
-        mv.strides[0] = sizeof(RTCRay)
-        return np.asarray(mv)
-
-    @property
-    def tnear(self):
-        cdef float[:] mv = <float[:self._M]> &self._ray[0].tnear
-        mv.strides[0] = sizeof(RTCRay)
-        return np.asarray(mv)
-
-    @property
-    def dir(self):
-        cdef float[:, :] mv = <float[:self._M, :3]> &self._ray[0].dir_x
-        mv.strides[0] = sizeof(RTCRay)
-        return np.asarray(mv)
-
-    @property
-    def time(self):
-        cdef float[:] mv = <float[:self._M]> &self._ray[0].time
-        mv.strides[0] = sizeof(RTCRay)
-        return np.asarray(mv)
-
-    @property
-    def tfar(self):
-        cdef float[:] mv = <float[:self._M]> &self._ray[0].tfar
-        mv.strides[0] = sizeof(RTCRay)
-        return np.asarray(mv)
-
-    @property
-    def mask(self):
-        cdef unsigned[:] mv = <unsigned[:self._M]> &self._ray[0].mask
-        mv.strides[0] = sizeof(RTCRay)
-        return np.asarray(mv)
-
-    @property
-    def id(self):
-        cdef unsigned[:] mv = <unsigned[:self._M]> &self._ray[0].id
-        mv.strides[0] = sizeof(RTCRay)
-        return np.asarray(mv)
-
-    @property
-    def flags(self):
-        cdef unsigned[:] mv = <unsigned[:self._M]> &self._ray[0].flags
-        mv.strides[0] = sizeof(RTCRay)
-        return np.asarray(mv)
-
-cdef class RayHit1M:
-    cdef:
-        RTCRayHit *_rayhit
-        unsigned _M
-
-    def __cinit__(self, unsigned M):
-        cdef size_t size = M*sizeof(RTCRayHit)
-        self._rayhit = <RTCRayHit *>aligned_alloc(size, 0x10)
-        if self._rayhit == NULL:
-            raise Exception('failed to allocate %d bytes' % (size,))
-        self._M = M
-
-    def __dealloc__(self):
-        aligned_free(self._rayhit)
-
-    @property
-    def size(self):
-        return self._M
-
-    def toarray(self):
-        return np.asarray(<RTCRayHit[:self._M]> self._rayhit)
-
-    @property
-    def org(self):
-        cdef float[:, :] mv = <float[:self._M, :3]> &self._rayhit[0].ray.org_x
-        mv.strides[0] = sizeof(RTCRayHit)
-        return np.asarray(mv)
-
-    @property
-    def tnear(self):
-        cdef float[:] mv = <float[:self._M]> &self._rayhit[0].ray.tnear
-        mv.strides[0] = sizeof(RTCRayHit)
-        return np.asarray(mv)
-
-    @property
-    def dir(self):
-        cdef float[:, :] mv = <float[:self._M, :3]> &self._rayhit[0].ray.dir_x
-        mv.strides[0] = sizeof(RTCRayHit)
-        return np.asarray(mv)
-
-    @property
-    def time(self):
-        cdef float[:] mv = <float[:self._M]> &self._rayhit[0].ray.time
-        mv.strides[0] = sizeof(RTCRayHit)
-        return np.asarray(mv)
-
-    @property
-    def tfar(self):
-        cdef float[:] mv = <float[:self._M]> &self._rayhit[0].ray.tfar
-        mv.strides[0] = sizeof(RTCRayHit)
-        return np.asarray(mv)
-
-    @property
-    def mask(self):
-        cdef unsigned[:] mv = <unsigned[:self._M]> &self._rayhit[0].ray.mask
-        mv.strides[0] = sizeof(RTCRayHit)
-        return np.asarray(mv)
-
-    @property
-    def id(self):
-        cdef unsigned[:] mv = <unsigned[:self._M]> &self._rayhit[0].ray.id
-        mv.strides[0] = sizeof(RTCRayHit)
-        return np.asarray(mv)
-
-    @property
-    def flags(self):
-        cdef unsigned[:] mv = <unsigned[:self._M]> &self._rayhit[0].ray.flags
-        mv.strides[0] = sizeof(RTCRayHit)
-        return np.asarray(mv)
-
-    @property
-    def normal(self):
-        cdef float[:, :] mv = <float[:self._M, :3]> &self._rayhit[0].hit.Ng_x
-        mv.strides[0] = sizeof(RTCRayHit)
-        return np.asarray(mv)
-
-    @property
-    def uv(self):
-        cdef float[:, :] mv = <float[:self._M, :2]> &self._rayhit[0].hit.u
-        mv.strides[0] = sizeof(RTCRayHit)
-        return np.asarray(mv)
-
-    @property
-    def prim_id(self):
-        cdef unsigned[:] mv = <unsigned[:self._M]> &self._rayhit[0].hit.primID
-        mv.strides[0] = sizeof(RTCRayHit)
-        return np.asarray(mv)
-
-    @property
-    def geom_id(self):
-        cdef unsigned[:] mv = <unsigned[:self._M]> &self._rayhit[0].hit.geomID
-        mv.strides[0] = sizeof(RTCRayHit)
-        return np.asarray(mv)
-
-    @property
-    def inst_id(self):
-        cdef unsigned[:, :] mv = \
-            <unsigned[:self._M, :RTC_MAX_INSTANCE_LEVEL_COUNT]> \
-            &self._rayhit[0].hit.instID[0]
-        mv.strides[0] = sizeof(RTCRayHit)
-        return np.asarray(mv)
-
-cdef class RayHitNp:
-    cdef:
-        RTCRayHitNp _rayhit
-        unsigned N
-
-    def __cinit__(self, unsigned N):
-        cdef RTCRayNp *ray = &self._rayhit.ray
-        ray.org_x = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        ray.org_y = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        ray.org_z = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        ray.tnear = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        ray.dir_x = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        ray.dir_y = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        ray.dir_z = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        ray.time = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        ray.tfar = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        ray.mask = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
-        ray.id = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
-        ray.flags = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
-
-        cdef RTCHitNp *hit = &self._rayhit.hit
-        hit.Ng_x = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        hit.Ng_y = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        hit.Ng_z = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        hit.u = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        hit.v = <float *>aligned_alloc(N*sizeof(float), 0x10)
-        hit.primID = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
-        hit.geomID = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
-        for i in range(RTC_MAX_INSTANCE_LEVEL_COUNT):
-            hit.instID[i] = <unsigned *>aligned_alloc(N*sizeof(unsigned), 0x10)
-
-    def __dealloc__(self):
-        aligned_free(self._rayhit.ray.org_x)
-        aligned_free(self._rayhit.ray.org_y)
-        aligned_free(self._rayhit.ray.org_z)
-        aligned_free(self._rayhit.ray.tnear)
-        aligned_free(self._rayhit.ray.dir_x)
-        aligned_free(self._rayhit.ray.dir_y)
-        aligned_free(self._rayhit.ray.dir_z)
-        aligned_free(self._rayhit.ray.time)
-        aligned_free(self._rayhit.ray.tfar)
-        aligned_free(self._rayhit.ray.mask)
-        aligned_free(self._rayhit.ray.id)
-        aligned_free(self._rayhit.ray.flags)
-        aligned_free(self._rayhit.hit.Ng_x)
-        aligned_free(self._rayhit.hit.Ng_y)
-        aligned_free(self._rayhit.hit.Ng_z)
-        aligned_free(self._rayhit.hit.u)
-        aligned_free(self._rayhit.hit.v)
-        aligned_free(self._rayhit.hit.primID)
-        aligned_free(self._rayhit.hit.geomID)
-        for i in range(RTC_MAX_INSTANCE_LEVEL_COUNT):
-            aligned_free(self._rayhit.hit.instID[i])
-
-    @property
-    def size(self):
-        return self._N
-
-    @property
-    def org_x(self):
-        return np.asarray(<float[:self._N]>self._rayhit.ray.org_x)
-
-    @property
-    def org_y(self):
-        np.asarray(<float[:self._N]>self._rayhit.ray.org_y)
-
-    @property
-    def org_z(self):
-        np.asarray(<float[:self._N]>self._rayhit.ray.org_z)
-
-    @property
-    def tnear(self):
-        np.asarray(<float[:self._N]>self._rayhit.ray.tnear)
-
-    @property
-    def dir_x(self):
-        np.asarray(<float[:self._N]>self._rayhit.ray.dir_x)
-
-    @property
-    def dir_y(self):
-        np.asarray(<float[:self._N]>self._rayhit.ray.dir_y)
-
-    @property
-    def dir_z(self):
-        np.asarray(<float[:self._N]>self._rayhit.ray.dir_z)
-
-    @property
-    def mask(self):
-        np.asarray(<unsigned[:self._N]>self._rayhit.ray.mask)
-
-    @property
-    def flags(self):
-        np.asarray(<unsigned[:self._N]>self._rayhit.ray.flags)
-
-    @property
-    def time(self):
-        np.asarray(<float[:self._N]>self._rayhit.ray.time)
-
-    @property
-    def tfar(self):
-        np.asarray(<float[:self._N]>self._rayhit.ray.tfar)
-
-    @property
-    def Ng_x(self):
-        np.asarray(<float[:self._N]>self._rayhit.hit.Ng_x)
-
-    @property
-    def Ng_y(self):
-        np.asarray(<float[:self._N]>self._rayhit.hit.Ng_y)
-
-    @property
-    def Ng_z(self):
-        np.asarray(<float[:self._N]>self._rayhit.hit.Ng_z)
-
-    @property
-    def u(self):
-        np.asarray(<float[:self._N]>self._rayhit.hit.u)
-
-    @property
-    def v(self):
-        np.asarray(<float[:self._N]>self._rayhit.hit.v)
-
-    @property
-    def primID(self):
-        np.asarray(<unsigned[:self._N]>self._rayhit.hit.primID)
-
-    @property
-    def geomID(self):
-        np.asarray(<unsigned[:self._N]>self._rayhit.hit.geomID)
-
-    @property
-    def instID(self):
-        return tuple(
-            <unsigned[:self._N]>self._rayhit.hit.instID[i]
-            for i in range(RTC_MAX_INSTANCE_LEVEL_COUNT)
-        )
 
 cdef class IntersectContext:
     cdef:
-        RTCIntersectContext _context
+        RTCRayQueryContext _context
 
     def __cinit__(self):
-        rtcInitIntersectContext(&self._context)
+        rtcInitRayQueryContext(&self._context)
 
     @property
     def flags(self):
@@ -1153,17 +834,7 @@ cdef class Scene:
     def intersect1(self, IntersectContext context, RayHit rayhit):
         rtcIntersect1(self._scene, &context._context, &rayhit._rayhit)
 
-    def intersect1M(self, IntersectContext context, RayHit1M rayhit):
-        rtcIntersect1M(self._scene, &context._context, rayhit._rayhit,
-                       rayhit._M, sizeof(RTCRayHit))
-
-    def intersectNp(self, IntersectContext context, RayHitNp rayhit):
-        rtcIntersectNp(self._scene, &context._context, &rayhit._rayhit,
-                       rayhit._N)
-
     def occluded1(self, IntersectContext context, Ray ray):
         rtcOccluded1(self._scene, &context._context, &ray._ray)
 
-    def occluded1M(self, IntersectContext context, Ray1M ray):
-        rtcOccluded1M(self._scene, &context._context, ray._ray, ray._M,
-                      sizeof(RTCRay))
+

@@ -9,23 +9,23 @@ cwd = os.path.abspath(os.path.expanduser(
     os.path.dirname(__file__)))
 
 include = ['/opt/local/include',
-           os.path.expanduser('~/embree/include')]
+           os.path.expanduser('~/embree4/include')]
 library = ['/opt/local/lib',
-           os.path.expanduser('~/embree/lib')]
+           os.path.expanduser('~/embree4/lib')]
 
 if os.name == 'nt':
     include = [
-        'c:/Program Files/Intel/Embree3/include',
-        os.path.join(cwd, 'embree3', 'include')]
+        'c:/Program Files/Intel/Embree4/include',
+        os.path.join(cwd, 'embree4', 'include')]
     library = [
-        'c:/Program Files/Intel/Embree3/lib',
-        os.path.join(cwd, 'embree3', 'lib')]
+        'c:/Program Files/Intel/Embree4/lib',
+        os.path.join(cwd, 'embree4', 'lib')]
 
 extensions = [
     Extension(
-        'embree',
-        ['embree.pyx'],
-        libraries=['embree3'],
+        'embree.wrapper',
+        sources = ['embree/wrapper.pyx'],
+        libraries=['embree4'],
         include_dirs=include,
         library_dirs=library
     )
@@ -33,7 +33,7 @@ extensions = [
 
 with open(os.path.join(cwd, 'README.md'), 'r') as f:
     long_description = f.read()
-with open(os.path.join(cwd, 'embree.pyx'), 'r') as f:
+with open(os.path.join(cwd, 'embree', 'wrapper.pyx'), 'r') as f:
     # use eval to get a clean string of version from file
     __version__ = eval(
         next(line for line in f if
