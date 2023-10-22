@@ -533,7 +533,7 @@ cdef class Buffer:
     def release(self):
         rtcReleaseBuffer(self._buffer)
 
-cdef void simple_error_function(void* userPtr, RTCError code, const char* str):
+cdef void simple_error_function(void* userPtr, RTCError code, const char* str) noexcept:
     print('%s: %s' % (Error(code), str))
 
 cdef class Device:
